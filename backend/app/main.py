@@ -38,6 +38,16 @@ async def lifespan(app: FastAPI):
     global tracker_pipeline
     loop = asyncio.get_running_loop()
     print("[Main] Initializing GestureDeck HandTrackerPipeline (camera on standby)...")
+
+    def on_action(event):
+        if ws_manager.active_connections:
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast_json({"type": "action_event", "event": event}),
+                loop,
+            )
+
+    dispatcher.add_listener(on_action)
+
     tracker_pipeline = HandTrackerPipeline(
         settings=settings,
         state_machine=state_machine,
@@ -66,6 +76,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+ext_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../extension"))
+if os.path.isdir(ext_dir):
+    app.mount("/static/extension", StaticFiles(directory=ext_dir), name="extension")
+
 
 # -------------------------------------------------------------
 # WebSocket Telemetry Stream
@@ -73,9 +88,6 @@ app.add_middleware(
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
-    # HUD has connected: turn on camera tracking on-demand
-    if tracker_pipeline:
-        tracker_pipeline.set_camera_requested(True)
     try:
         while True:
             # Receive client messages / commands
@@ -88,6 +100,26 @@ async def websocket_endpoint(websocket: WebSocket):
             cmd_type = data.get("type")
             if cmd_type == "ping":
                 await websocket.send_text(json.dumps({"type": "pong", "time": data.get("time")}))
+            elif cmd_type in ("register", "bridge_hello"):
+                client_type = data.get("client", "hud")
+                await ws_manager.update_meta(websocket, {
+                    "client_type": client_type,
+                    "title": data.get("title", ""),
+                    "url": data.get("url", ""),
+                })
+                if client_type == "youtube_bridge":
+                    await websocket.send_text(json.dumps({
+                        "type": "bridge_ack",
+                        "status": "connected",
+                        "settings": settings.model_dump(),
+                    }))
+                    await ws_manager.broadcast_json({
+                        "type": "bridge_status",
+                        "bridge": ws_manager.get_bridge_info(),
+                    })
+                elif client_type == "hud":
+                    if tracker_pipeline:
+                        tracker_pipeline.set_camera_requested(True)
             elif cmd_type == "set_wake":
                 target_state = data.get("state", "ACTIVE")
                 state_machine.wake_state = target_state
@@ -139,7 +171,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await ws_manager.disconnect(websocket)
     finally:
         # If all HUD sessions closed, immediately release camera hardware
-        if tracker_pipeline and len(ws_manager.active_connections) == 0:
+        if tracker_pipeline and not ws_manager.has_hud_clients():
             tracker_pipeline.set_camera_requested(False)
 
 
@@ -163,6 +195,7 @@ def get_status():
         "media_detection_enabled": ctx["media_detection_enabled"],
         "window_title": ctx["window_title"],
         "spotify_connected": spotify_manager.is_connected(),
+        "youtube_bridge": ws_manager.get_bridge_info(),
         "recent_actions": dispatcher.action_history[-10:],
     }
 

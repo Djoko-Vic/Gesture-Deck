@@ -8,15 +8,19 @@ import { sonicAudio } from "../lib/audio";
 interface NavbarProps {
   isConnected?: boolean;
   latencyMs?: number;
+  isBridgeConnected?: boolean;
   onOpenSettings?: () => void;
   onOpenTrainer?: () => void;
+  onOpenBridge?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   isConnected = false,
   latencyMs = 0,
+  isBridgeConnected = false,
   onOpenSettings,
   onOpenTrainer,
+  onOpenBridge,
 }) => {
   const pathname = usePathname();
   const [isMuted, setIsMuted] = useState(false);
@@ -97,6 +101,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {isMuted ? "[ MUTE: ON ]" : "[ MUTE: OFF ]"}
           </button>
+
+          {/* YouTube Bridge Button */}
+          {onOpenBridge && (
+            <button
+              onClick={onOpenBridge}
+              className={`btn-technical text-[10px] py-1 px-2.5 flex items-center gap-1.5 ${
+                isBridgeConnected
+                  ? "border-[#1E6B3E] text-[#1E6B3E] hover:bg-[#1E6B3E] hover:text-white"
+                  : "border-[#E5322B] text-[#E5322B] hover:bg-[#E5322B] hover:text-white"
+              }`}
+              title="YouTube Bridge Status & Bookmarklet"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isBridgeConnected ? "bg-[#1E6B3E]" : "bg-[#E5322B]"}`} />
+              <span>YT BRIDGE</span>
+            </button>
+          )}
 
           {/* Custom Gesture Trainer Button */}
           {onOpenTrainer && (

@@ -8,6 +8,7 @@ import { ActionDeck } from "../../components/ActionDeck";
 import { Navbar } from "../../components/Navbar";
 import { SettingsModal } from "../../components/SettingsModal";
 import { GestureTrainerModal } from "../../components/GestureTrainerModal";
+import { YouTubeBridgeModal } from "../../components/YouTubeBridgeModal";
 import { fetchStatus, setTargetProfileApi, setMediaDetectionApi, setTargetApi, setCameraStateApi } from "../../lib/api";
 import { SystemStatus } from "../../lib/types";
 
@@ -29,6 +30,7 @@ export default function AppDashboardPage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTrainerOpen, setIsTrainerOpen] = useState(false);
+  const [isBridgeOpen, setIsBridgeOpen] = useState(false);
 
   useEffect(() => {
     const loadStatus = async () => {
@@ -107,6 +109,8 @@ export default function AppDashboardPage() {
       <Navbar
         isConnected={isConnected}
         latencyMs={latencyMs}
+        isBridgeConnected={systemStatus?.youtube_bridge?.connected}
+        onOpenBridge={() => setIsBridgeOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenTrainer={() => setIsTrainerOpen(true)}
       />
@@ -179,7 +183,12 @@ export default function AppDashboardPage() {
 
           {/* Right Column: SonicHUD Spec & Quick Gesture Manual (5 cols) */}
           <div className="lg:col-span-5 flex flex-col gap-5">
-            <SonicHUD telemetry={telemetry} onToggleWake={sendWakeState} />
+            <SonicHUD
+              telemetry={telemetry}
+              onToggleWake={sendWakeState}
+              isBridgeConnected={systemStatus?.youtube_bridge?.connected}
+              onOpenBridge={() => setIsBridgeOpen(true)}
+            />
 
             {/* Printed Spec-Sheet Table for Gestures */}
             <div className="border border-[var(--ink)] bg-[#0B0B0B] p-4 font-mono text-xs">
@@ -246,6 +255,13 @@ export default function AppDashboardPage() {
       <GestureTrainerModal
         isOpen={isTrainerOpen}
         onClose={() => setIsTrainerOpen(false)}
+      />
+
+      <YouTubeBridgeModal
+        isOpen={isBridgeOpen}
+        onClose={() => setIsBridgeOpen(false)}
+        systemStatus={systemStatus}
+        onTriggerAction={handleManualAction}
       />
     </div>
   );

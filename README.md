@@ -222,6 +222,8 @@ Want to create your own gesture (e.g., "Rock on" 🤘 to open a playlist)?
 
 ---
 
+---
+
 ## 5. Complete Gesture Taxonomy
 
 All command gestures are performed with the **Right Hand** while the controller is in the **ACTIVE** state:
@@ -230,11 +232,11 @@ All command gestures are performed with the **Right Hand** while the controller 
 | :--- | :--- | :--- | :--- |
 | **Wave to Wake** | Open palm waving side-to-side ($\ge 3$ reversals in 1s) | **Wake Controller** | 1500ms post-wake grace lockout |
 | **Play / Pause** | Index finger extended straight UP ☝️ | **Toggle Play / Pause** | 250ms hold + 800ms cooldown + neutral reset |
-| **Next Track** | Peace Sign ✌️ (Index + Middle extended UP in V) | **Next Track / Video** | 300ms hold + 1000ms cooldown + neutral reset |
-| **Previous Track**| Three Fingers ✌️+💍 (Index + Middle + Ring extended UP) | **Previous Track** | 300ms hold + 1000ms cooldown + neutral reset |
-| **Volume Up** | Thumbs Up 👍 (Thumb UP, 4 fingers folded) | **Volume +6%** | 180ms confirm; repeats slowly (~600ms) while held |
-| **Volume Down** | Thumbs Down 👎 (Thumb DOWN, 4 fingers folded) | **Volume -6%** | 180ms confirm; repeats slowly (~600ms) while held |
-| **Pinch & Drag** | Thumb tip + Index tip touching ($\le 0.40$ gap) | **Timeline Scrub ($\pm 45\text{s}$)** | Requires left clutch; release commits seek |
+| **Next Track** | Peace Sign ✌️ (Index + Middle extended UP in V) | **Next Track / Video** | Direct DOM click on next video or top recommendation; 300ms hold + 1000ms cooldown |
+| **Previous Track**| Three Fingers ✌️+💍 (Index + Middle + Ring extended UP) | **Restart (0:00) / Prev** | Restarts video from 0:00 (if >3s) or previous video; 300ms hold + 1000ms cooldown |
+| **Volume Up** | Thumbs Up 👍 (Thumb UP, 4 fingers folded) | **Site Volume +5%** | Modifies **only** player/site volume, protecting host OS volume! Repeats ~600ms while held |
+| **Volume Down** | Thumbs Down 👎 (Thumb DOWN, 4 fingers folded) | **Site Volume -5%** | Modifies **only** player/site volume, protecting host OS volume! Repeats ~600ms while held |
+| **Pinch & Drag** | Thumb tip + Index tip touching ($\le 0.40$ gap) | **Visual Scrubber Drag** | Clicks and drags YouTube's red scrubber handle & thumbnail preview across the screen |
 | **Closed Fist** | All 5 fingers folded ✊ held $\ge 1.0\text{s}$ | **Standby Sleep** | Manual sleep trigger |
 | **Open Palm** | All 5 fingers extended facing camera 🖐️ | **Neutral (Safe Pose)** | Safe resting pose after waving |
 | **Peace Sign Up**| Index + Middle pointing straight UP | **Neutral (Safe Pose)** | Sway-immune neutral pose |
@@ -243,48 +245,61 @@ All command gestures are performed with the **Right Hand** while the controller 
 
 ## 6. How Pinch & Drag Works for YouTube Videos
 
+GestureDeck provides **true visual click-and-drag** directly on the YouTube video player:
+
 ```
 [ Step 1: Clutch Check ]
 Left hand held open ──► Safety Interlock Disengaged
                              │
 [ Step 2: Proximity Gate ]
-Thumb (Pt 4) to Index (Pt 8) gap <= 0.40 ──► Trigger Pinch Grab
+Thumb tip to Index tip gap <= 0.40 ──► Trigger Pinch Grab
                              │
-[ Step 3: Anchor Lock ]
-Freeze initial X position as 0.0s baseline
+[ Step 3: Anchor Lock & MouseDown Simulation ]
+Freezes initial X position ──► Dispatches `pointerdown` / `mousedown` on .ytp-progress-bar
                              │
-[ Step 4: Horizontal Drag ]
-Hand moves left (-45s) or right (+45s) with EMA smoothing & deadzone
+[ Step 4: Real-Time Visual Drag ]
+Hand moves left (-45s) or right (+45s) across camera:
+ ├── Dispatches `pointermove` across progress bar matching hand pixel coordinates
+ ├── Physically translates red knob (.ytp-scrubber-container)
+ ├── Slides video preview thumbnail tooltip (.ytp-tooltip)
+ └── Calls player.seekTo(targetTime, false) to preview live video frames!
                              │
 [ Step 5: Finger Release ]
-Gap widens > 0.55 ──► Commit Seek
-                             │
-         ┌───────────────────┴───────────────────┐
-         ▼                                       ▼
-  [ Browser Shortcut Mode ]               [ Linux MPRIS Mode ]
-  Sends Left/Right Arrow (5s) or          Direct D-Bus call to
-  J/L (10s) keystrokes into YouTube tab   Player.Seek(microseconds)
+Gap widens > 0.55 ──► Dispatches `pointerup` / `mouseup` & commits seekTo(targetTime, true)
 ```
 
-1. **Wrist Normalization**: The distance between thumb tip and index tip is divided by the wrist-to-knuckle palm scale. The gesture triggers reliably regardless of your distance from the lens.
-2. **0.40 Easy-Grab Threshold**: Relaxed from an earlier strict 0.24 threshold, allowing natural finger touching without physical strain.
-3. **0.55 Release Hysteresis**: Keeps the drag active even if fingers loosen slightly during movement, eliminating accidental mid-drag releases.
-4. **Anchor Point Locking**: The moment pinch triggers, the horizontal hand coordinate is anchored. Moving left scrubs backward; moving right scrubs forward.
-5. **Direct YouTube Seek Execution**:
-   - **Keyboard Mode**: Synthesizes standard YouTube shortcut keys ($\leftarrow/\rightarrow$ for 5-second hops, or `j`/`l` for 10-second jumps) matching the accumulated drag seconds.
-   - **MPRIS Mode**: Dispatches asynchronous D-Bus method calls directly to the browser's media player interface (`org.mpris.MediaPlayer2.Player.Seek`), repositioning video playback instantly without requiring active tab focus.
+1. **Physical Mouse Emulation**: The moment your fingers pinch, the bridge calculates the exact pixel coordinate on the `.ytp-progress-bar` corresponding to current playback and fires synthetic pointer events (`pointerdown`, `pointermove`, `pointerup`).
+2. **Visual Feedback on YouTube**: The red scrubber handle and the preview thumbnail bubble follow your hand across the progress bar, showing the exact timestamp and seek delta (e.g. `+18s`).
+3. **No OS Cursor Hijacking**: The mouse drag simulation occurs inside the web page DOM, so your system mouse pointer is never locked, stolen, or moved.
+4. **Site-Only Volume Isolation**:
+   - Changing volume (Thumbs Up/Down) adjusts the HTML5 `<video>` or `#movie_player` volume directly.
+   - Master operating system volume (`Key.media_volume_up/down`) is **never touched**, completely preventing desktop audio spikes!
+5. **Smart Standalone Video Navigation**:
+   - When viewing standalone YouTube videos (where Autoplay is off and there is no playlist), shortcut keys like `Shift+N` do nothing.
+   - GestureDeck detects standalone videos and automatically clicks the top recommended video (`ytd-compact-video-renderer`), ensuring **Next** always works!
 
 ---
 
-## 7. Context Profiles & Dispatch Modes
+## 7. GestureDeck YouTube Bridge Setup
 
-GestureDeck intelligently adapts its action dispatch according to the media player you are using:
+To enable physical scrubber dragging and site-only volume on YouTube, use either of these two zero-friction methods:
 
-| Profile | Active Condition | Play / Pause | Next Track | Previous Track | Seek / Scrub |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`youtube`** | Focused browser tab contains `"YouTube"` | Sends `k` | Sends `Shift+N` | Sends `Shift+P` | Arrow Keys or `j`/`l` |
-| **`spotify`** | Active window is Spotify, or Spotify API connected | Spotify Web API or Media Key | Spotify `Next` | Spotify `Prev` | Spotify API Seek |
-| **`generic`** | VLC, Netflix, SoundCloud, Twitch, system players | OS `MediaPlayPause` | OS `MediaNext` | OS `MediaPrevious` | OS `Left`/`Right` Arrow |
+### ⚡ Option 1: 1-Click Bookmarklet (Instant, Zero Install)
+1. In Brave or Chrome, show your bookmarks bar (`Ctrl + Shift + B`).
+2. Open the Studio HUD at `http://localhost:3000/app` and click **`[ ⚡ YT BRIDGE ]`**.
+3. Drag the **`📌 DRAG ME TO BOOKMARKS BAR`** button to your browser bookmarks bar (or copy the JavaScript code).
+4. On any YouTube tab, click your new bookmark!
+5. A sleek glowing green badge (**GestureDeck Ready**) appears in the bottom-right of YouTube.
+
+### 🚀 Option 2: Browser Extension (Automatic)
+1. Open `brave://extensions` (or `chrome://extensions`).
+2. Toggle **Developer mode** in the top-right corner.
+3. Click **Load unpacked** in the top-left corner.
+4. Select the `extension/` folder in this repo:
+   ```
+   /home/djokov1c/Proj/yt-hand-tracker/extension
+   ```
+5. Done! The bridge will now automatically connect whenever you open YouTube.
 
 ---
 
@@ -304,7 +319,7 @@ To eliminate false positives, GestureDeck implements five interlocking safety me
 
 ## 9. Running Automated Tests
 
-Run the full automated test suite (22 unit tests):
+Run the full automated test suite (27 unit tests):
 
 ```bash
 # Run backend pytest suite
@@ -317,6 +332,7 @@ cd frontend && npm run build
 ```
 
 ### What the Unit Tests Cover:
+- Action dispatcher site-only volume protection and live listeners.
 - Wave detector amplitude and directional reversal validation.
 - Wrist translation and palm-scale invariant coordinate normalization.
 - Pinch distance computation, thresholding, and hysteresis logic.

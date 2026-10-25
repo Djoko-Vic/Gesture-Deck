@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "GestureDeck YouTube Bridge",
+  "version": "1.0.0",
+  "description": "Direct visual scrubber drag, site-only volume control, and gesture navigation for YouTube",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GestureDeck Bridge"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

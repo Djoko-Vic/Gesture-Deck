@@ -28,6 +28,11 @@ class ActionDispatcher:
         self.selected_target_id: str = selected_target_id
         self.last_action_time: float = 0.0
         self.action_history: List[Dict[str, any]] = []
+        self.listeners: List[Any] = []
+
+    def add_listener(self, listener) -> None:
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def set_spotify_manager(self, manager: SpotifyManager) -> None:
         self.spotify_manager = manager
@@ -149,6 +154,7 @@ class ActionDispatcher:
 
         event = {
             "action": action_name,
+            "params": params,
             "success": success,
             "message": message,
             "profile": profile,
@@ -157,6 +163,12 @@ class ActionDispatcher:
         self.action_history.append(event)
         if len(self.action_history) > 50:
             self.action_history.pop(0)
+
+        for listener in self.listeners:
+            try:
+                listener(event)
+            except Exception:
+                pass
 
         return event
 
@@ -248,19 +260,26 @@ class ActionDispatcher:
             if self.spotify_manager.volume_step(delta):
                 return True
 
-        # Call MPRIS volume adjustment if available
-        self._mpris_call("volume_up" if up else "volume_down")
-
-        # For YouTube: Up Arrow / Down Arrow directly steps YouTube player volume!
         if profile == "youtube":
+            # For YouTube: strictly change site/player volume, NEVER system master volume!
+            # Up/Down arrows directly step YouTube player volume (5% increments)
             arrow_key = Key.up if up else Key.down
             self.keyboard.tap(arrow_key)
             time.sleep(0.02)
             self.keyboard.tap(arrow_key)
+            # Return immediately: never fall through to Key.media_volume_up / Key.media_volume_down
+            return True
 
-        # System volume keys
-        key = Key.media_volume_up if up else Key.media_volume_down
-        self.keyboard.tap(key)
+        # Call MPRIS volume adjustment if available for non-YouTube media targets
+        if self._mpris_call("volume_up" if up else "volume_down"):
+            return True
+
+        # System volume keys ONLY for generic/desktop profile fallback
+        if profile == "generic":
+            key = Key.media_volume_up if up else Key.media_volume_down
+            self.keyboard.tap(key)
+            return True
+
         return True
 
     def _handle_mute(self) -> bool:

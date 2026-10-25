@@ -135,6 +135,11 @@ export interface SystemStatus {
   media_detection_enabled?: boolean;
   window_title: string;
   spotify_connected: boolean;
+  youtube_bridge?: {
+    connected: boolean;
+    title?: string;
+    url?: string;
+  };
   recent_actions: ActionEvent[];
 }
 

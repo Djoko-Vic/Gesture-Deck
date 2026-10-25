@@ -6,6 +6,8 @@ import { TelemetryPacket } from "../lib/types";
 interface SonicHUDProps {
   telemetry: TelemetryPacket | null;
   onToggleWake: (targetState: "ACTIVE" | "SLEEPING") => void;
+  isBridgeConnected?: boolean;
+  onOpenBridge?: () => void;
 }
 
 const GESTURE_LABELS: Record<string, { label: string; action: string }> = {
@@ -21,7 +23,12 @@ const GESTURE_LABELS: Record<string, { label: string; action: string }> = {
   none: { label: "IDLE / AWAITING POSE", action: "NONE" },
 };
 
-export const SonicHUD: React.FC<SonicHUDProps> = ({ telemetry, onToggleWake }) => {
+export const SonicHUD: React.FC<SonicHUDProps> = ({
+  telemetry,
+  onToggleWake,
+  isBridgeConnected = false,
+  onOpenBridge,
+}) => {
   const wakeState = telemetry?.wake_state || "SLEEPING";
   const isActive = wakeState === "ACTIVE";
   const inGrace = telemetry?.in_grace_period ?? false;
@@ -45,8 +52,8 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({ telemetry, onToggleWake }) =
 
   return (
     <div className="flex flex-col gap-4 font-mono text-xs">
-      {/* Top Spec Block: Wake State, Safety Clutch, Scrub Status */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Top Spec Block: Wake State, Safety Clutch, Scrub Status, YouTube Bridge */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* 1. Wake State Indicator (Hard stepped ON/OFF) */}
         <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
           <div className="flex items-center justify-between">
@@ -134,6 +141,44 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({ telemetry, onToggleWake }) =
             <span className="text-[10px] text-[var(--grey)] block">
               {isScrubbing ? "RELEASE TO COMMIT" : "REQUIRES CLUTCH"}
             </span>
+          </div>
+        </div>
+
+        {/* 4. YouTube Bridge Status */}
+        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
+              04 // YT BRIDGE
+            </span>
+            <span
+              className={`px-1.5 py-0.2 text-[9px] border font-bold ${
+                isBridgeConnected
+                  ? "border-[#1E6B3E] bg-[#1E6B3E] text-[var(--paper)]"
+                  : "border-[#E5322B] text-[#E5322B]"
+              }`}
+            >
+              {isBridgeConnected ? "ONLINE" : "STANDBY"}
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${isBridgeConnected ? "bg-[#1E6B3E]" : "bg-[#E5322B]"}`} />
+              <span className="font-display-condensed text-base text-[var(--ink)] block truncate">
+                {isBridgeConnected ? "DOM CONTROL" : "NOT CONNECTED"}
+              </span>
+            </div>
+            {onOpenBridge ? (
+              <button
+                onClick={onOpenBridge}
+                className="text-[10px] text-[#E5322B] hover:underline block mt-0.5 text-left font-bold"
+              >
+                {isBridgeConnected ? "[ VIEW STATUS ]" : "[ ⚡ CONNECT YOUTUBE ]"}
+              </button>
+            ) : (
+              <span className="text-[10px] text-[var(--grey)] block mt-0.5">
+                {isBridgeConnected ? "SITE VOL & SCRUB READY" : "BOOKMARKLET / EXT"}
+              </span>
+            )}
           </div>
         </div>
       </div>
