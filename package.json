@@ -1,0 +1,24 @@
+{
+  "name": "gesturedeck",
+  "version": "1.0.0",
+  "description": "Zero-cloud hand-gesture media controller for Spotify, YouTube, and system media",
+  "private": true,
+  "scripts": {
+    "dev": "./run_dev.sh",
+    "dev:backend": "cd backend && ./venv/bin/python run.py",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "cd backend && ./venv/bin/pytest tests/ -v",
+    "test:watch": "cd backend && ./venv/bin/pytest tests/ -v -f"
+  },
+  "keywords": [
+    "gesture-recognition",
+    "mediapipe",
+    "fastapi",
+    "nextjs",
+    "webaudio",
+    "media-controller"
+  ],
+  "author": "GestureDeck Team",
+  "license": "MIT"
+}
