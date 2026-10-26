@@ -29,6 +29,10 @@ class ActionDispatcher:
         self.last_action_time: float = 0.0
         self.action_history: List[Dict[str, any]] = []
         self.listeners: List[Any] = []
+        self.is_bridge_connected: Optional[Any] = None
+
+    def set_bridge_connected_callback(self, cb: Any) -> None:
+        self.is_bridge_connected = cb
 
     def add_listener(self, listener) -> None:
         if listener not in self.listeners:
@@ -208,12 +212,22 @@ class ActionDispatcher:
         if profile == "spotify" and self.spotify_manager.is_connected():
             if self.spotify_manager.play_pause():
                 return True
-        self._mpris_call("play_pause")
+
+        # If YouTube Bridge client is active, it handles play_pause directly in the DOM via WebSocket
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        # Try MPRIS call first (direct D-Bus to browser/media player).
+        # If MPRIS successfully handled the command, return True immediately to avoid double-toggling!
+        if self._mpris_call("play_pause"):
+            return True
+
         if profile == "youtube":
-            # Tap 'k' for YouTube
+            # Tap 'k' for YouTube fallback when MPRIS is unavailable
             self.keyboard.tap("k")
             return True
-        # Generic system media key
+
+        # Generic system media key fallback
         self.keyboard.tap(Key.media_play_pause)
         return True
 
@@ -222,7 +236,11 @@ class ActionDispatcher:
             if self.spotify_manager.next_track():
                 return True
 
-        self._mpris_call("next")
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        if self._mpris_call("next"):
+            return True
 
         if profile == "youtube":
             # YouTube next video shortcut: Shift+N
@@ -234,11 +252,6 @@ class ActionDispatcher:
                 self.keyboard.release(Key.shift)
             except Exception:
                 pass
-            try:
-                self.keyboard.tap("N")
-            except Exception:
-                pass
-            self.keyboard.tap(Key.media_next)
             return True
 
         self.keyboard.tap(Key.media_next)
@@ -249,7 +262,11 @@ class ActionDispatcher:
             if self.spotify_manager.previous_track():
                 return True
 
-        self._mpris_call("previous")
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        if self._mpris_call("previous"):
+            return True
 
         if profile == "youtube":
             # On YouTube:
@@ -264,7 +281,6 @@ class ActionDispatcher:
                 pass
             # 2. For standalone videos, '0' restarts playback from 0:00!
             self.keyboard.tap("0")
-            self.keyboard.tap(Key.media_previous)
             return True
 
         self.keyboard.tap(Key.media_previous)

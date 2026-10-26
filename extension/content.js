@@ -367,28 +367,27 @@
     const player = getPlayer();
     const video = getVideo();
 
-    if (player && typeof player.getPlayerState === "function") {
-      try {
-        const state = player.getPlayerState();
-        if (state === 1) {
-          player.pauseVideo();
-          showBanner("⏸", "Paused", "", 1200);
-        } else {
-          player.playVideo();
-          showBanner("▶", "Playing", "", 1200);
-        }
-        return;
-      } catch (e) {}
-    }
+    // Ground truth playing state (HTML5 video element if present, or player API state === 1)
+    const isPlaying = video
+      ? (!video.paused && !video.ended)
+      : (player && typeof player.getPlayerState === "function" && player.getPlayerState() === 1);
 
-    if (video) {
-      if (video.paused) {
-        video.play();
-        showBanner("▶", "Playing", "", 1200);
-      } else {
-        video.pause();
-        showBanner("⏸", "Paused", "", 1200);
+    if (isPlaying) {
+      if (player && typeof player.pauseVideo === "function") {
+        try { player.pauseVideo(); } catch (e) {}
       }
+      if (video && !video.paused) {
+        try { video.pause(); } catch (e) {}
+      }
+      showBanner("⏸", "Paused", "", 1200);
+    } else {
+      if (player && typeof player.playVideo === "function") {
+        try { player.playVideo(); } catch (e) {}
+      }
+      if (video && video.paused) {
+        try { video.play(); } catch (e) {}
+      }
+      showBanner("▶", "Playing", "", 1200);
     }
   }
 

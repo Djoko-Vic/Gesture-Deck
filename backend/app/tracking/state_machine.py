@@ -45,9 +45,11 @@ class GestureStateMachine:
             linger_frames=4,
         )
 
-        # Fist-hold sleep detector
-        self.fist_start_time: Optional[float] = None
-        self.fist_hold_duration: float = 1.0  # seconds
+        # Sleep gesture detector (Extend Thumb & Pinky held for 1.0s)
+        self.sleep_gesture_start_time: Optional[float] = None
+        self.sleep_hold_duration: float = 1.0  # seconds
+        self.fist_start_time: Optional[float] = None  # retained for backward compatibility
+        self.fist_hold_duration: float = 1.0
 
         # Command debounce, confirm window, and cooldown
         self.candidate_gesture: Optional[str] = None
@@ -206,22 +208,22 @@ class GestureStateMachine:
             if self.trainer.is_recording and len(flat_features) == 63:
                 self.trainer.add_recording_sample(flat_features)
 
-            # Step 4b: Fist Held -> Sleep condition
-            if detected_gesture == "fist":
-                if self.fist_start_time is None:
-                    self.fist_start_time = now
-                elif (now - self.fist_start_time) >= self.fist_hold_duration:
+            # Step 4b: Thumb & Pinky Extended (Hold 1.0s) -> Sleep condition
+            if detected_gesture == "thumb_pinky":
+                if self.sleep_gesture_start_time is None:
+                    self.sleep_gesture_start_time = now
+                elif (now - self.sleep_gesture_start_time) >= self.sleep_hold_duration:
                     self.wake_state = "SLEEPING"
-                    self.fist_start_time = None
+                    self.sleep_gesture_start_time = None
                     action_event = {
                         "type": "wake_state",
                         "state": "SLEEPING",
-                        "reason": "fist_hold",
+                        "reason": "thumb_pinky_hold",
                         "timestamp": now,
                     }
                     self.last_fired_action = action_event
             else:
-                self.fist_start_time = None
+                self.sleep_gesture_start_time = None
 
             # Step 4c: Timeline Scrubbing with Pinch Hysteresis, Smoothing & Deadzone
             pinch_on = getattr(self.settings, "pinch_on", 0.40)
@@ -340,7 +342,7 @@ class GestureStateMachine:
             # Step 4f: Gesture Stability, Confirm Window & Cooldown
             # ---------------------------------------------------------
             clutch_allows_action = is_clutch_engaged if self.settings.clutch_enabled else True
-            is_actionable = detected_gesture not in ("none", "fist", "pinch", "open_palm", "peace_up")
+            is_actionable = detected_gesture not in ("none", "fist", "thumb_pinky", "pinch", "open_palm", "peace_up")
 
             confirm_progress = 0.0
 
@@ -429,11 +431,12 @@ class GestureStateMachine:
                         action_event = disp_res
                         self.last_fired_action = disp_res
             else:
-                if not self.is_scrubbing and detected_gesture != "fist":
+                if not self.is_scrubbing and detected_gesture not in ("fist", "thumb_pinky"):
                     self.candidate_gesture = None
                     self.candidate_frames = 0
                     self.candidate_start_time = None
         else:
+            self.sleep_gesture_start_time = None
             self.fist_start_time = None
             self.candidate_gesture = None
             self.candidate_frames = 0

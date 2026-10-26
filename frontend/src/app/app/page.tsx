@@ -349,11 +349,11 @@ export default function AppDashboardPage() {
                   </div>
                 </div>
 
-                {/* Closed Fist */}
+                {/* Thumb & Pinky */}
                 <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
                   <div className="col-span-5 font-bold flex items-center gap-1.5">
-                    <span>✊</span>
-                    <span>CLOSED FIST</span>
+                    <span>🤙</span>
+                    <span>THUMB & PINKY</span>
                   </div>
                   <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
                     Hold 1.0s

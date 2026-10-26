@@ -306,8 +306,8 @@ export default function LandingPage() {
                 {/* 7. Sleep */}
                 <tr className="hover:bg-[var(--paper-dim)] transition-colors group">
                   <td className="p-3 font-bold text-[#1E6B3E] border-r border-[var(--ink)]">07</td>
-                  <td className="p-3 font-bold border-r border-[var(--ink)] group-hover:text-[#E5322B] transition-colors">CLOSED FIST</td>
-                  <td className="p-3 border-r border-[var(--ink)]">00 EXTENDED</td>
+                  <td className="p-3 font-bold border-r border-[var(--ink)] group-hover:text-[#E5322B] transition-colors">THUMB &amp; PINKY</td>
+                  <td className="p-3 border-r border-[var(--ink)]">02 EXTENDED (THUMB + PINKY)</td>
                   <td className="p-3 border-r border-[var(--ink)]">STATIC</td>
                   <td className="p-3 font-bold text-[#E5322B] border-r border-[var(--ink)]">STANDBY SLEEP</td>
                   <td className="p-3 text-[var(--grey)]">CONTINUOUS HOLD &ge; 1.0 SECOND</td>

@@ -32,6 +32,7 @@ dispatcher.default_seek_seconds = getattr(settings, "pinch_seek_seconds", 10.0)
 trainer = GestureTrainer(confidence_threshold=settings.min_confidence)
 state_machine = GestureStateMachine(settings=settings, action_dispatcher=dispatcher, trainer=trainer)
 ws_manager = ConnectionManager()
+dispatcher.set_bridge_connected_callback(lambda: bool(ws_manager.get_bridge_info().get("connected", False)))
 tracker_pipeline: Optional[HandTrackerPipeline] = None
 
 
