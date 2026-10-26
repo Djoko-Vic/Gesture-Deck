@@ -165,7 +165,7 @@ Ensure the **Safety Clutch** is armed (hold your **Left Hand** in an open palm p
 - **Previous Track**: Make a **Three-Finger Sign** ✌️+💍 (index, middle, and ring fingers extended UP, pinky folded).
 - **Volume Up (+6%)**: Give a **Thumbs Up** 👍 (thumb pointing up, four fingers curled). Hold to repeat every 600ms.
 - **Volume Down (-6%)**: Give a **Thumbs Down** 👎 (thumb pointing down, four fingers curled). Hold to repeat every 600ms.
-- **Standby Sleep**: Form a **Closed Fist** ✊ and hold for 1.0 second.
+- **Standby Sleep**: Extend **Thumb and Pinky** 🤙 (Shaka pose: thumb & pinky extended, index, middle, ring curled) and hold for 1.0 second.
 
 ---
 
@@ -237,7 +237,7 @@ All command gestures are performed with the **Right Hand** while the controller 
 | **Volume Up** | Thumbs Up 👍 (Thumb UP, 4 fingers folded) | **Site Volume +5%** | Modifies **only** player/site volume, protecting host OS volume! 250ms hold, repeats ~600ms while held |
 | **Volume Down** | Thumbs Down 👎 (Thumb DOWN, 4 fingers folded) | **Site Volume -5%** | Modifies **only** player/site volume, protecting host OS volume! 250ms hold, repeats ~600ms while held |
 | **Pinch & Drag** | Thumb tip + Index tip touching ($\le 0.40$ gap) | **Visual Scrubber Drag** | Clicks and drags YouTube's red scrubber handle & thumbnail preview across the screen |
-| **Closed Fist** | All 5 fingers folded ✊ held $\ge 1.0\text{s}$ | **Standby Sleep** | Manual sleep trigger |
+| **Thumb & Pinky** | Extend Thumb & Pinky 🤙 (3 fingers folded) held $\ge 1.0\text{s}$ | **Standby Sleep** | Manual sleep trigger |
 | **Open Palm** | All 5 fingers extended facing camera 🖐️ | **Neutral (Safe Pose)** | Safe resting pose after waving |
 | **Peace Sign Up**| Index + Middle pointing straight UP | **Neutral (Safe Pose)** | Sway-immune neutral pose |
 

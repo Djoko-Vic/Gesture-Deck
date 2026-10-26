@@ -43,7 +43,8 @@ def classify_built_in_gesture(
     - next: Index + middle extended & held together, pointing RIGHT from user's POV (within 30 deg of x-axis).
     - previous: Index + middle extended & held together, pointing LEFT from user's POV (within 30 deg of x-axis).
     - thumbs_up / thumbs_down: Thumb extended, 4 fingers folded, pointing up/down.
-    - fist: Closed fist (held for 1s puts controller to sleep).
+    - fist: Closed fist.
+    - thumb_pinky: Thumb & pinky extended, index/middle/ring curled (held for 1s puts controller to sleep).
     - open_palm: Neutral pose with NO ACTION (safe to hold after waving).
     - peace_up: Normal peace sign pointing up does NOTHING.
     Also computes pinch distance (thumb tip 4 to index tip 8).
@@ -121,7 +122,25 @@ def classify_built_in_gesture(
             finger_states=finger_states,
         )
 
-    # 4. Play/Pause: Index finger ONLY extended, pointing UP (middle, ring, pinky folded, thumb relaxed)
+    # 4. Standby Sleep: Extend Thumb & Pinky (Shaka pose: thumb & pinky extended, index/middle/ring curled)
+    thumb_pinky_dist = euclidean_distance(thumb_tip, norm_landmarks[20])
+    if (
+        finger_states.pinky
+        and not finger_states.index
+        and not finger_states.middle
+        and not finger_states.ring
+        and (finger_states.thumb or thumb_pinky_dist > 0.60)
+    ):
+        return GestureResult(
+            name="thumb_pinky",
+            confidence=0.95,
+            is_pinch=is_pinch,
+            pinch_distance=pinch_dist,
+            finger_states=finger_states,
+            details={"pose": "thumb_pinky_sleep", "thumb_pinky_dist": round(thumb_pinky_dist, 3)},
+        )
+
+    # 5. Play/Pause: Index finger ONLY extended, pointing UP (middle, ring, pinky folded, thumb relaxed)
     index_mcp = norm_landmarks[5]
     index_dx = index_tip.get("x", 0.0) - index_mcp.get("x", 0.0)
     index_dy = index_tip.get("y", 0.0) - index_mcp.get("y", 0.0)

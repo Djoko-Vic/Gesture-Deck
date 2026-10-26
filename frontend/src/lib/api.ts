@@ -2,6 +2,14 @@ import { AppSettings, SystemStatus, CustomGesture, MediaTarget } from "./types";
 
 const API_BASE = "http://localhost:8000";
 
+export function getCameraStreamUrl(): string {
+  return `${API_BASE}/api/camera/stream`;
+}
+
+export function getCameraFrameUrl(): string {
+  return `${API_BASE}/api/camera/frame.jpg`;
+}
+
 export async function fetchStatus(): Promise<SystemStatus> {
   const res = await fetch(`${API_BASE}/api/status`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Status fetch failed: ${res.statusText}`);

@@ -26,6 +26,8 @@ export interface ScrubStatus {
   delta_seconds: number;
   anchor_x?: number;
   smoothed_x?: number;
+  range_seconds?: number;
+  pinch_seek_seconds?: number;
 }
 
 export interface PinchStatus {
@@ -109,6 +111,8 @@ export interface AppSettings {
   drag_deadzone?: number;
   drag_smoothing?: number;
   scrub_range_seconds?: number;
+  pinch_seek_seconds?: number;
+  default_view_mode?: "skeleton" | "webcam";
   dropout_frames?: number;
   confirm_ms?: number;
   release_ms?: number;

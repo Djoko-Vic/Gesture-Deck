@@ -24,8 +24,8 @@ const ACTION_OPTIONS = [
   { value: "volume_up", label: "VOLUME UP (+6%)" },
   { value: "volume_down", label: "VOLUME DOWN (-6%)" },
   { value: "mute", label: "TOGGLE MUTE" },
-  { value: "seek_forward", label: "SEEK FORWARD (+10S)" },
-  { value: "seek_backward", label: "SEEK BACKWARD (-10S)" },
+  { value: "seek_forward", label: "SEEK FORWARD (+SEEK STEP)" },
+  { value: "seek_backward", label: "SEEK BACKWARD (-SEEK STEP)" },
   { value: "like_song", label: "LIKE SONG ON SPOTIFY" },
 ];
 

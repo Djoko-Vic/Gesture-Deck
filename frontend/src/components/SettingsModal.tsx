@@ -250,6 +250,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Pinch & Grab Control Time (Seek Amount) */}
+              <div className="sm:col-span-2 flex flex-col gap-2 p-3 border-2 border-[#E5322B] bg-[#E5322B]/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold uppercase text-xs block text-[#E5322B]">
+                      PINCH &amp; GRAB TIME CONTROL (SEEK AMOUNT)
+                    </span>
+                    <span className="text-[9px] text-[var(--grey)]">
+                      Amount of time controlled when pinching and grabbing instead of fixed 10s
+                    </span>
+                  </div>
+                  <span className="font-bold text-sm text-[#E5322B] bg-[#E5322B]/10 px-2 py-0.5 border border-[#E5322B]">
+                    &plusmn;{settings.pinch_seek_seconds ?? 10}S
+                  </span>
+                </div>
+
+                {/* Preset quick buttons */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[9px] text-[var(--grey)] uppercase font-bold mr-1">PRESETS:</span>
+                  {[5, 10, 15, 30, 60].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setSettings({ ...settings, pinch_seek_seconds: sec })}
+                      className={`btn-technical text-[9px] py-0.5 px-2 cursor-pointer ${
+                        (settings.pinch_seek_seconds ?? 10) === sec
+                          ? "bg-[#E5322B] text-white border-[#E5322B]"
+                          : "text-[var(--ink)] hover:bg-[var(--ink)] hover:text-white"
+                      }`}
+                    >
+                      {sec}S
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <input
+                    type="range"
+                    min={1}
+                    max={120}
+                    step={1}
+                    value={settings.pinch_seek_seconds ?? 10}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        pinch_seek_seconds: parseFloat(e.target.value),
+                      })
+                    }
+                    className="flex-1 accent-[#E5322B]"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={settings.pinch_seek_seconds ?? 10}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        pinch_seek_seconds: Math.max(1, parseFloat(e.target.value) || 1),
+                      })
+                    }
+                    className="w-16 bg-[var(--paper-dim)] border border-[var(--ink)] px-2 py-1 text-center font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Scrub Range Seconds */}
+              <div className="sm:col-span-2 flex flex-col gap-1.5 p-2 border border-[var(--ink)] bg-[var(--paper)]">
+                <div className="flex justify-between text-[10px]">
+                  <span className="font-bold uppercase">MAXIMUM TIMELINE SCRUB SWEEP RANGE</span>
+                  <span className="font-bold text-[#E5322B]">{settings.scrub_range_seconds ?? 60}S</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={180}
+                  step={5}
+                  value={settings.scrub_range_seconds ?? 60}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      scrub_range_seconds: parseFloat(e.target.value),
+                    })
+                  }
+                  className="w-full accent-[#E5322B]"
+                />
+                <span className="text-[8px] text-[var(--grey)]">Full-sweep maximum timeline drag span</span>
+              </div>
               {/* Pinch Grab Threshold */}
               <div className="flex flex-col gap-1.5 p-2 border border-[var(--ink)] bg-[var(--paper)]">
                 <div className="flex justify-between text-[10px]">
@@ -420,6 +508,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <option value={30}>30 FPS (STANDARD)</option>
                   <option value={60}>60 FPS (HIGH)</option>
                 </select>
+              </div>
+
+              {/* Display Mode: Skeleton Alone vs Webcam + Skeleton */}
+              <div className="sm:col-span-2 flex flex-col gap-1 p-2 border border-[var(--ink)]">
+                <span className="text-[9px] uppercase text-[var(--grey)] font-bold">
+                  CANVAS DISPLAY MODE
+                </span>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettings({ ...settings, default_view_mode: "skeleton" });
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("gesturedeck_view_mode", "skeleton");
+                      }
+                    }}
+                    className={`btn-technical text-[10px] py-1.5 px-3 cursor-pointer ${
+                      (settings.default_view_mode ?? "skeleton") === "skeleton"
+                        ? "bg-[#E5322B] text-white border-[#E5322B]"
+                        : "text-[var(--ink)]"
+                    }`}
+                  >
+                    🦴 SKELETON ALONE
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettings({ ...settings, default_view_mode: "webcam" });
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("gesturedeck_view_mode", "webcam");
+                      }
+                    }}
+                    className={`btn-technical text-[10px] py-1.5 px-3 cursor-pointer ${
+                      settings.default_view_mode === "webcam"
+                        ? "bg-[#1E6B3E] text-white border-[#1E6B3E]"
+                        : "text-[var(--ink)]"
+                    }`}
+                  >
+                    📷 WEBCAM + SKELETON
+                  </button>
+                </div>
+                <span className="text-[8px] text-[var(--grey)] mt-1">
+                  Choose whether to show the webcam feed behind the skeleton or the skeleton alone on a technical black grid.
+                </span>
               </div>
             </div>
           </div>

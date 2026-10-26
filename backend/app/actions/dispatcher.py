@@ -29,6 +29,10 @@ class ActionDispatcher:
         self.last_action_time: float = 0.0
         self.action_history: List[Dict[str, any]] = []
         self.listeners: List[Any] = []
+        self.is_bridge_connected: Optional[Any] = None
+
+    def set_bridge_connected_callback(self, cb: Any) -> None:
+        self.is_bridge_connected = cb
 
     def add_listener(self, listener) -> None:
         if listener not in self.listeners:
@@ -144,7 +148,10 @@ class ActionDispatcher:
             elif action_name == "mute":
                 success = self._handle_mute()
             elif action_name in ("seek_forward", "seek_backward", "seek_delta"):
-                delta = params.get("delta_seconds", 10.0 if action_name == "seek_forward" else -10.0)
+                default_step = getattr(self, "default_seek_seconds", 10.0)
+                default_delta = default_step if action_name == "seek_forward" else -default_step
+                delta = params.get("delta_seconds", default_delta)
+                params["delta_seconds"] = delta
                 success = self._handle_seek(delta, profile)
                 message = f"Seek {delta:+.1f}s committed under '{profile}'"
             elif action_name == "like_song":
@@ -205,12 +212,22 @@ class ActionDispatcher:
         if profile == "spotify" and self.spotify_manager.is_connected():
             if self.spotify_manager.play_pause():
                 return True
-        self._mpris_call("play_pause")
+
+        # If YouTube Bridge client is active, it handles play_pause directly in the DOM via WebSocket
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        # Try MPRIS call first (direct D-Bus to browser/media player).
+        # If MPRIS successfully handled the command, return True immediately to avoid double-toggling!
+        if self._mpris_call("play_pause"):
+            return True
+
         if profile == "youtube":
-            # Tap 'k' for YouTube
+            # Tap 'k' for YouTube fallback when MPRIS is unavailable
             self.keyboard.tap("k")
             return True
-        # Generic system media key
+
+        # Generic system media key fallback
         self.keyboard.tap(Key.media_play_pause)
         return True
 
@@ -219,7 +236,11 @@ class ActionDispatcher:
             if self.spotify_manager.next_track():
                 return True
 
-        self._mpris_call("next")
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        if self._mpris_call("next"):
+            return True
 
         if profile == "youtube":
             # YouTube next video shortcut: Shift+N
@@ -231,11 +252,6 @@ class ActionDispatcher:
                 self.keyboard.release(Key.shift)
             except Exception:
                 pass
-            try:
-                self.keyboard.tap("N")
-            except Exception:
-                pass
-            self.keyboard.tap(Key.media_next)
             return True
 
         self.keyboard.tap(Key.media_next)
@@ -246,7 +262,11 @@ class ActionDispatcher:
             if self.spotify_manager.previous_track():
                 return True
 
-        self._mpris_call("previous")
+        if self.is_bridge_connected and self.is_bridge_connected():
+            return True
+
+        if self._mpris_call("previous"):
+            return True
 
         if profile == "youtube":
             # On YouTube:
@@ -261,7 +281,6 @@ class ActionDispatcher:
                 pass
             # 2. For standalone videos, '0' restarts playback from 0:00!
             self.keyboard.tap("0")
-            self.keyboard.tap(Key.media_previous)
             return True
 
         self.keyboard.tap(Key.media_previous)
@@ -312,20 +331,26 @@ class ActionDispatcher:
         self._mpris_call("seek_delta", {"delta_seconds": delta_seconds})
 
         if profile == "youtube":
-            # On YouTube: 'l' (+10s) and 'j' (-10s) seek anywhere on the page without requiring player focus!
             abs_delta = abs(delta_seconds)
             steps_10s = int(abs_delta // 10)
-            remaining_5s = int((abs_delta % 10) // 5)
+            remaining_5s = int(round((abs_delta % 10) / 5))
 
             step_key = "l" if delta_seconds > 0 else "j"
             arrow_key = Key.right if delta_seconds > 0 else Key.left
 
-            for _ in range(max(1, steps_10s)):
-                self.keyboard.tap(step_key)
-                time.sleep(0.03)
+            # If under 8 seconds, use 5s arrow keys rather than jumping 10s
+            if abs_delta < 8:
+                arrow_count = max(1, int(round(abs_delta / 5)))
+                for _ in range(arrow_count):
+                    self.keyboard.tap(arrow_key)
+                    time.sleep(0.03)
+            else:
+                for _ in range(steps_10s):
+                    self.keyboard.tap(step_key)
+                    time.sleep(0.03)
 
-            if remaining_5s > 0:
-                self.keyboard.tap(arrow_key)
+                if remaining_5s > 0:
+                    self.keyboard.tap(arrow_key)
 
             return True
 

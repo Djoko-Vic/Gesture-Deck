@@ -227,3 +227,108 @@ def test_natural_thumbs_up_gesture():
     res = classify_built_in_gesture(norm, "Right")
     assert res.name == "thumbs_up"
     assert res.confidence >= 0.85
+
+
+def test_classify_thumb_pinky_sleep_gesture():
+    """Verify that thumb + pinky extended with index, middle, ring folded classifies as thumb_pinky."""
+    landmarks = [{"x": 0.0, "y": 0.0, "z": 0.0} for _ in range(21)]
+    # Index MCP(5), PIP(6), DIP(7), TIP(8) - folded
+    landmarks[5] = {"x": -0.1, "y": -0.3, "z": 0.0}
+    landmarks[6] = {"x": -0.1, "y": -0.4, "z": 0.0}
+    landmarks[7] = {"x": -0.1, "y": -0.35, "z": 0.0}
+    landmarks[8] = {"x": -0.1, "y": -0.25, "z": 0.0}
+
+    # Middle MCP(9), PIP(10), DIP(11), TIP(12) - folded
+    landmarks[9] = {"x": 0.0, "y": -0.3, "z": 0.0}
+    landmarks[10] = {"x": 0.0, "y": -0.4, "z": 0.0}
+    landmarks[11] = {"x": 0.0, "y": -0.35, "z": 0.0}
+    landmarks[12] = {"x": 0.0, "y": -0.25, "z": 0.0}
+
+    # Ring MCP(13), PIP(14), DIP(15), TIP(16) - folded
+    landmarks[13] = {"x": 0.1, "y": -0.3, "z": 0.0}
+    landmarks[14] = {"x": 0.1, "y": -0.4, "z": 0.0}
+    landmarks[15] = {"x": 0.1, "y": -0.35, "z": 0.0}
+    landmarks[16] = {"x": 0.1, "y": -0.25, "z": 0.0}
+
+    # Pinky MCP(17), PIP(18), DIP(19), TIP(20) - extended
+    landmarks[17] = {"x": 0.3, "y": -0.3, "z": 0.0}
+    landmarks[18] = {"x": 0.4, "y": -0.5, "z": 0.0}
+    landmarks[19] = {"x": 0.45, "y": -0.7, "z": 0.0}
+    landmarks[20] = {"x": 0.5, "y": -0.9, "z": 0.0}
+
+    # Thumb CMC(1), MCP(2), IP(3), TIP(4) - extended outward
+    landmarks[1] = {"x": -0.1, "y": -0.1, "z": 0.0}
+    landmarks[2] = {"x": -0.2, "y": -0.2, "z": 0.0}
+    landmarks[3] = {"x": -0.35, "y": -0.35, "z": 0.0}
+    landmarks[4] = {"x": -0.5, "y": -0.5, "z": 0.0}
+
+    res = classify_built_in_gesture(landmarks, handedness="Right")
+    assert res.name == "thumb_pinky"
+    assert res.confidence >= 0.90
+
+
+def test_state_machine_sleep_thumb_pinky():
+    """Verify that holding thumb_pinky for 1.0s puts controller into SLEEPING state."""
+    settings = AppSettings(wake_grace_ms=0, clutch_enabled=False)
+    sm = GestureStateMachine(settings, ActionDispatcher(), GestureTrainer())
+    sm.wake_state = "ACTIVE"
+    sm.wake_transition_time = 0.0
+
+    # Build thumb_pinky landmarks
+    landmarks = [{"x": 0.0, "y": 0.0, "z": 0.0} for _ in range(21)]
+    landmarks[5] = {"x": -0.1, "y": -0.3, "z": 0.0}; landmarks[8] = {"x": -0.1, "y": -0.25, "z": 0.0}
+    landmarks[9] = {"x": 0.0, "y": -0.3, "z": 0.0}; landmarks[12] = {"x": 0.0, "y": -0.25, "z": 0.0}
+    landmarks[13] = {"x": 0.1, "y": -0.3, "z": 0.0}; landmarks[16] = {"x": 0.1, "y": -0.25, "z": 0.0}
+    landmarks[17] = {"x": 0.3, "y": -0.3, "z": 0.0}; landmarks[18] = {"x": 0.4, "y": -0.5, "z": 0.0}; landmarks[20] = {"x": 0.5, "y": -0.9, "z": 0.0}
+    landmarks[1] = {"x": -0.1, "y": -0.1, "z": 0.0}; landmarks[2] = {"x": -0.2, "y": -0.2, "z": 0.0}; landmarks[4] = {"x": -0.5, "y": -0.5, "z": 0.0}
+
+    hand = {
+        "handedness": "Right",
+        "confidence": 0.95,
+        "landmarks": landmarks,
+        "norm_landmarks": landmarks,
+        "flat_features": [0.0] * 63,
+    }
+
+    # At 0.0s: initiate hold
+    t0 = sm.process_frame([hand], timestamp=10.0)
+    assert sm.wake_state == "ACTIVE"
+
+    # At 0.5s: still active
+    t1 = sm.process_frame([hand], timestamp=10.5)
+    assert sm.wake_state == "ACTIVE"
+
+    # At 1.05s: held >= 1.0s, enters SLEEPING
+    t2 = sm.process_frame([hand], timestamp=11.05)
+    assert sm.wake_state == "SLEEPING"
+    assert t2["action_event"]["type"] == "wake_state"
+    assert t2["action_event"]["state"] == "SLEEPING"
+    assert t2["action_event"]["reason"] == "thumb_pinky_hold"
+
+
+def test_state_machine_fist_does_not_sleep():
+    """Verify that holding a fist does NOT put controller into SLEEPING state anymore."""
+    settings = AppSettings(wake_grace_ms=0, clutch_enabled=False)
+    sm = GestureStateMachine(settings, ActionDispatcher(), GestureTrainer())
+    sm.wake_state = "ACTIVE"
+    sm.wake_transition_time = 0.0
+
+    # All folded landmarks (fist)
+    landmarks = [{"x": 0.0, "y": 0.0, "z": 0.0} for _ in range(21)]
+    for i in (5, 9, 13, 17):
+        landmarks[i] = {"x": 0.0, "y": -0.2, "z": 0.0}
+        landmarks[i + 3] = {"x": 0.0, "y": -0.15, "z": 0.0}
+
+    hand = {
+        "handedness": "Right",
+        "confidence": 0.95,
+        "landmarks": landmarks,
+        "norm_landmarks": landmarks,
+        "flat_features": [0.0] * 63,
+    }
+
+    sm.process_frame([hand], timestamp=10.0)
+    sm.process_frame([hand], timestamp=11.5)
+    # Must remain ACTIVE (fist is no longer the sleep gesture)
+    assert sm.wake_state == "ACTIVE"
+

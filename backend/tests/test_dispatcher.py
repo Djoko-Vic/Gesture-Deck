@@ -41,3 +41,66 @@ def test_dispatcher_action_listeners_receive_events():
     assert len(received_events) == 1
     assert received_events[0]["action"] == "play_pause"
     assert received_events[0]["profile"] == "youtube"
+
+
+def test_dispatcher_custom_seek_deltas():
+    dispatcher = ActionDispatcher(target_profile_override="youtube")
+    dispatcher.keyboard = MagicMock()
+    dispatcher._mpris_call = MagicMock(return_value=False)
+    dispatcher.default_seek_seconds = 15.0
+
+    # Test seek_forward with default 15s step
+    ev = dispatcher.dispatch("seek_forward")
+    assert ev["success"] is True
+    assert ev["params"]["delta_seconds"] == 15.0
+
+    # Test seek_delta with 5s: under 8s, should tap arrow key, not 'l'
+    dispatcher.keyboard.reset_mock()
+    ev5 = dispatcher.dispatch("seek_delta", {"delta_seconds": 5.0})
+    assert ev5["success"] is True
+    dispatcher.keyboard.tap.assert_called_with(Key.right)
+
+    # Test seek_delta with 30s: 3 'l' taps
+    dispatcher.keyboard.reset_mock()
+    ev30 = dispatcher.dispatch("seek_delta", {"delta_seconds": 30.0})
+    assert ev30["success"] is True
+    assert dispatcher.keyboard.tap.call_count == 3
+
+
+def test_dispatcher_play_pause_mpris_no_double_fire():
+    """Verify that when MPRIS call succeeds, keyboard 'k' is NOT tapped to prevent double-toggling."""
+    dispatcher = ActionDispatcher(target_profile_override="youtube")
+    dispatcher.keyboard = MagicMock()
+    dispatcher._mpris_call = MagicMock(return_value=True)
+
+    ev = dispatcher.dispatch("play_pause")
+    assert ev["success"] is True
+    dispatcher._mpris_call.assert_called_with("play_pause")
+    # 'k' or media keys must NOT be tapped if MPRIS handled it
+    dispatcher.keyboard.tap.assert_not_called()
+
+
+def test_dispatcher_play_pause_bridge_connected_no_key_tap():
+    """Verify that when YouTube Bridge is connected, dispatcher lets bridge handle it and doesn't tap 'k'."""
+    dispatcher = ActionDispatcher(target_profile_override="youtube")
+    dispatcher.keyboard = MagicMock()
+    dispatcher._mpris_call = MagicMock(return_value=False)
+    dispatcher.set_bridge_connected_callback(lambda: True)
+
+    ev = dispatcher.dispatch("play_pause")
+    assert ev["success"] is True
+    dispatcher._mpris_call.assert_not_called()
+    dispatcher.keyboard.tap.assert_not_called()
+
+
+def test_dispatcher_play_pause_fallback_taps_k():
+    """Verify that when MPRIS fails and bridge is not connected, 'k' is tapped as fallback."""
+    dispatcher = ActionDispatcher(target_profile_override="youtube")
+    dispatcher.keyboard = MagicMock()
+    dispatcher._mpris_call = MagicMock(return_value=False)
+    dispatcher.set_bridge_connected_callback(lambda: False)
+
+    ev = dispatcher.dispatch("play_pause")
+    assert ev["success"] is True
+    dispatcher._mpris_call.assert_called_with("play_pause")
+    dispatcher.keyboard.tap.assert_called_with("k")

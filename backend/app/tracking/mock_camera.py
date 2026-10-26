@@ -98,7 +98,7 @@ class SyntheticHandGenerator:
         lms: List[Dict[str, float]] = [{"x": wrist_x, "y": wrist_y, "z": wrist_z}]
 
         # Thumb (1-4)
-        t_curl = 0.0 if gesture in ("open_palm", "thumbs_up") else 0.08
+        t_curl = 0.0 if gesture in ("open_palm", "thumbs_up", "thumb_pinky") else 0.08
         lms.append({"x": wrist_x - 0.04 * sign, "y": wrist_y - 0.04, "z": wrist_z})
         lms.append({"x": wrist_x - 0.08 * sign, "y": wrist_y - 0.08, "z": wrist_z})
         lms.append({"x": wrist_x - 0.11 * sign + t_curl, "y": wrist_y - 0.12, "z": wrist_z})
@@ -116,7 +116,7 @@ class SyntheticHandGenerator:
             lms.append({"x": wrist_x + 0.18 * sign, "y": wrist_y - 0.06, "z": wrist_z})
             lms.append({"x": wrist_x + 0.25 * sign, "y": wrist_y - 0.06, "z": wrist_z})
         else:
-            idx_folded = gesture in ("thumbs_up", "thumbs_down", "fist")
+            idx_folded = gesture in ("thumbs_up", "thumbs_down", "fist", "thumb_pinky")
             idx_y_offset = 0.08 if idx_folded else 0.0
             lms.append({"x": wrist_x - 0.04 * sign, "y": wrist_y - 0.12, "z": wrist_z})
             lms.append({"x": wrist_x - 0.03 * sign, "y": wrist_y - 0.17 + idx_y_offset * 0.5, "z": wrist_z})
@@ -134,15 +134,15 @@ class SyntheticHandGenerator:
             lms.append({"x": wrist_x + 0.18 * sign, "y": wrist_y - 0.03, "z": wrist_z})
             lms.append({"x": wrist_x + 0.25 * sign, "y": wrist_y - 0.03, "z": wrist_z})
         else:
-            mid_folded = gesture in ("play_pause", "thumbs_up", "thumbs_down", "fist")
+            mid_folded = gesture in ("play_pause", "thumbs_up", "thumbs_down", "fist", "thumb_pinky")
             mid_y_offset = 0.09 if mid_folded else 0.0
             lms.append({"x": wrist_x, "y": wrist_y - 0.13, "z": wrist_z})
             lms.append({"x": wrist_x, "y": wrist_y - 0.18 + mid_y_offset * 0.5, "z": wrist_z})
             lms.append({"x": wrist_x, "y": wrist_y - 0.23 + mid_y_offset * 0.8, "z": wrist_z})
             lms.append({"x": wrist_x, "y": wrist_y - 0.27 + mid_y_offset, "z": wrist_z})
 
-        # Ring (13-16) - folded for play_pause, next, pinch, fist
-        ring_folded = gesture in ("play_pause", "next", "thumbs_up", "thumbs_down", "fist", "pinch")
+        # Ring (13-16) - folded for play_pause, next, pinch, fist, thumb_pinky
+        ring_folded = gesture in ("play_pause", "next", "thumbs_up", "thumbs_down", "fist", "pinch", "thumb_pinky")
         ring_y_offset = 0.09 if ring_folded else 0.0
         lms.append({"x": wrist_x + 0.04 * sign, "y": wrist_y - 0.12, "z": wrist_z})
         lms.append({"x": wrist_x + 0.04 * sign, "y": wrist_y - 0.17 + ring_y_offset * 0.5, "z": wrist_z})

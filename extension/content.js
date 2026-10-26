@@ -367,28 +367,27 @@
     const player = getPlayer();
     const video = getVideo();
 
-    if (player && typeof player.getPlayerState === "function") {
-      try {
-        const state = player.getPlayerState();
-        if (state === 1) {
-          player.pauseVideo();
-          showBanner("⏸", "Paused", "", 1200);
-        } else {
-          player.playVideo();
-          showBanner("▶", "Playing", "", 1200);
-        }
-        return;
-      } catch (e) {}
-    }
+    // Ground truth playing state (HTML5 video element if present, or player API state === 1)
+    const isPlaying = video
+      ? (!video.paused && !video.ended)
+      : (player && typeof player.getPlayerState === "function" && player.getPlayerState() === 1);
 
-    if (video) {
-      if (video.paused) {
-        video.play();
-        showBanner("▶", "Playing", "", 1200);
-      } else {
-        video.pause();
-        showBanner("⏸", "Paused", "", 1200);
+    if (isPlaying) {
+      if (player && typeof player.pauseVideo === "function") {
+        try { player.pauseVideo(); } catch (e) {}
       }
+      if (video && !video.paused) {
+        try { video.pause(); } catch (e) {}
+      }
+      showBanner("⏸", "Paused", "", 1200);
+    } else {
+      if (player && typeof player.playVideo === "function") {
+        try { player.playVideo(); } catch (e) {}
+      }
+      if (video && video.paused) {
+        try { video.play(); } catch (e) {}
+      }
+      showBanner("▶", "Playing", "", 1200);
     }
   }
 
@@ -640,8 +639,15 @@
             handlePrevious();
           } else if (act === "play_pause") {
             handlePlayPause();
-          } else if (act === "seek_delta") {
-            const delta = params.delta_seconds || 0;
+          } else if (act === "seek_delta" || act === "seek_forward" || act === "seek_backward") {
+            const defaultStep = 10;
+            const delta = params.delta_seconds !== undefined
+              ? params.delta_seconds
+              : act === "seek_forward"
+              ? defaultStep
+              : act === "seek_backward"
+              ? -defaultStep
+              : 0;
             if (Math.abs(delta) >= 1.0) {
               const video = getVideo();
               const player = getPlayer();
