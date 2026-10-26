@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { HandData } from "../lib/types";
+import { getCameraStreamUrl } from "../lib/api";
 
 interface HandCanvasProps {
   hands: HandData[];
@@ -13,6 +14,10 @@ interface HandCanvasProps {
   activeGesture: string;
   fps?: number;
   cameraType?: string;
+  seekRangeSeconds?: number;
+  pinchSeekSeconds?: number;
+  viewMode?: "skeleton" | "webcam";
+  onToggleViewMode?: (mode: "skeleton" | "webcam") => void;
 }
 
 const BONE_CONNECTIONS: [number, number][] = [
@@ -40,8 +45,31 @@ export const HandCanvas: React.FC<HandCanvasProps> = ({
   activeGesture,
   fps = 0,
   cameraType = "webcam",
+  seekRangeSeconds = 30.0,
+  pinchSeekSeconds = 10.0,
+  viewMode: propViewMode,
+  onToggleViewMode,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [internalViewMode, setInternalViewMode] = useState<"skeleton" | "webcam">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gesturedeck_view_mode");
+      if (saved === "webcam" || saved === "skeleton") return saved;
+    }
+    return propViewMode || "skeleton";
+  });
+
+  const effectiveMode = propViewMode || internalViewMode;
+
+  const handleToggleMode = (mode: "skeleton" | "webcam") => {
+    setInternalViewMode(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gesturedeck_view_mode", mode);
+    }
+    if (onToggleViewMode) {
+      onToggleViewMode(mode);
+    }
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -58,25 +86,46 @@ export const HandCanvas: React.FC<HandCanvasProps> = ({
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    // 1. Inverted Black Ground (--ink #0B0B0B)
-    ctx.fillStyle = "#0B0B0B";
-    ctx.fillRect(0, 0, width, height);
+    if (effectiveMode === "webcam") {
+      // 1. Transparent Clear with subtle technical grid overlay for webcam view
+      ctx.clearRect(0, 0, width, height);
 
-    // 2. Faint 1px Technical Grid
-    ctx.strokeStyle = "rgba(231, 229, 224, 0.08)";
-    ctx.lineWidth = 1;
-    const gridSize = 24;
-    for (let x = 0; x < width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
+      ctx.strokeStyle = "rgba(231, 229, 224, 0.08)";
+      ctx.lineWidth = 1;
+      const gridSize = 32;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    } else {
+      // 1. Inverted Black Ground (--ink #0B0B0B)
+      ctx.fillStyle = "#0B0B0B";
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Faint 1px Technical Grid
+      ctx.strokeStyle = "rgba(231, 229, 224, 0.08)";
+      ctx.lineWidth = 1;
+      const gridSize = 24;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
     }
 
     // 3. Technical Corner Crosshairs & Labels
@@ -268,8 +317,8 @@ export const HandCanvas: React.FC<HandCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Slider position
-      const maxDelta = 45.0;
+      // Slider position based on configured seekRangeSeconds
+      const maxDelta = seekRangeSeconds || 30.0;
       const clampedDelta = Math.max(-maxDelta, Math.min(maxDelta, scrubDelta));
       const ratio = clampedDelta / maxDelta;
       const sliderX = cx + ratio * ((barW - 24) / 2);
@@ -293,13 +342,64 @@ export const HandCanvas: React.FC<HandCanvasProps> = ({
     ctx.fillText(`SOURCE: ${cameraType.toUpperCase()} // ${fps} FPS`, pad + 6, pad + 12);
 
     ctx.textAlign = "right";
-    ctx.fillText(`POSE: ${activeGesture.toUpperCase()}`, width - pad - 6, pad + 12);
+    // Place POSE slightly left so it does not collide with toggle buttons in corner
+    ctx.fillText(`POSE: ${activeGesture.toUpperCase()}`, width - 260, pad + 12);
     ctx.restore();
-  }, [hands, isPinch, pinchDistance, isScrubbing, scrubDelta, clutchEngaged, activeGesture, fps, cameraType]);
+  }, [hands, isPinch, pinchDistance, isScrubbing, scrubDelta, clutchEngaged, activeGesture, fps, cameraType, seekRangeSeconds, effectiveMode]);
+
+  const streamUrl = getCameraStreamUrl();
 
   return (
-    <div className="relative w-full aspect-[4/3] max-h-[520px] border border-[var(--ink)] bg-[#0B0B0B] p-1">
-      <canvas ref={canvasRef} className="w-full h-full pixelated block" />
+    <div className="relative w-full aspect-[4/3] max-h-[520px] border border-[var(--ink)] bg-[#0B0B0B] p-1 overflow-hidden select-none">
+      {/* View Mode Toggle Controls */}
+      <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 bg-[#121212]/90 backdrop-blur-sm border border-[var(--ink)] p-1 text-[9px] font-mono shadow-md">
+        <button
+          type="button"
+          onClick={() => handleToggleMode("skeleton")}
+          className={`px-2 py-0.5 uppercase font-bold transition-all cursor-pointer ${
+            effectiveMode === "skeleton"
+              ? "bg-[#E5322B] text-white shadow-sm"
+              : "text-[var(--grey)] hover:text-white"
+          }`}
+          title="Show skeleton alone on technical background"
+        >
+          🦴 SKELETON ALONE
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleMode("webcam")}
+          className={`px-2 py-0.5 uppercase font-bold transition-all cursor-pointer ${
+            effectiveMode === "webcam"
+              ? "bg-[#1E6B3E] text-white shadow-sm"
+              : "text-[var(--grey)] hover:text-white"
+          }`}
+          title="Show live webcam stream with skeleton overlay"
+        >
+          📷 WEBCAM + SKELETON
+        </button>
+      </div>
+
+      {/* Live Webcam Stream Layer (when in webcam mode) */}
+      {effectiveMode === "webcam" && (
+        <div className="absolute inset-1 overflow-hidden">
+          <img
+            src={streamUrl}
+            alt="Webcam Feed"
+            className="w-full h-full object-cover select-none pointer-events-none transition-opacity duration-300"
+            onError={(e) => {
+              (e.target as HTMLElement).style.opacity = "0";
+            }}
+            onLoad={(e) => {
+              (e.target as HTMLElement).style.opacity = "1";
+            }}
+          />
+          {/* Subtle grading overlay to ensure skeleton readability */}
+          <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+        </div>
+      )}
+
+      {/* 21-Joint Skeleton Canvas */}
+      <canvas ref={canvasRef} className="relative z-10 w-full h-full pixelated block pointer-events-none" />
     </div>
   );
 };

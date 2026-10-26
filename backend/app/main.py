@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -27,6 +28,7 @@ dispatcher = ActionDispatcher(
     media_detection_enabled=settings.media_detection_enabled,
     target_profile_override=settings.target_profile,
 )
+dispatcher.default_seek_seconds = getattr(settings, "pinch_seek_seconds", 10.0)
 trainer = GestureTrainer(confidence_threshold=settings.min_confidence)
 state_machine = GestureStateMachine(settings=settings, action_dispatcher=dispatcher, trainer=trainer)
 ws_manager = ConnectionManager()
@@ -214,6 +216,7 @@ def update_settings(new_settings: AppSettings):
     trainer.confidence_threshold = settings.min_confidence
     dispatcher.set_media_detection(settings.media_detection_enabled)
     dispatcher.set_target_profile(settings.target_profile)
+    dispatcher.default_seek_seconds = getattr(settings, "pinch_seek_seconds", 10.0)
     if tracker_pipeline:
         tracker_pipeline.settings = settings
     return {"status": "updated", "settings": settings.model_dump()}
@@ -228,6 +231,7 @@ def reset_settings():
     trainer.confidence_threshold = settings.min_confidence
     dispatcher.set_media_detection(settings.media_detection_enabled)
     dispatcher.set_target_profile(settings.target_profile)
+    dispatcher.default_seek_seconds = getattr(settings, "pinch_seek_seconds", 10.0)
     if tracker_pipeline:
         tracker_pipeline.settings = settings
     return {"status": "reset", "settings": settings.model_dump()}
@@ -298,6 +302,47 @@ def set_camera_state(req: CameraStateRequest):
         "requested": req.requested,
         "active": tracker_pipeline.camera_active if tracker_pipeline else False,
     }
+
+
+@app.get("/api/camera/stream")
+async def get_camera_stream():
+    """
+    Live multipart/x-mixed-replace MJPEG webcam stream.
+    Directly compatible with HTML <img> elements.
+    """
+    if tracker_pipeline and not tracker_pipeline.camera_requested:
+        tracker_pipeline.set_camera_requested(True)
+
+    async def stream_generator():
+        while True:
+            if tracker_pipeline and tracker_pipeline.latest_frame_jpeg:
+                frame_data = tracker_pipeline.latest_frame_jpeg
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n"
+                    b"Content-Length: " + str(len(frame_data)).encode() + b"\r\n\r\n" +
+                    frame_data + b"\r\n"
+                )
+            await asyncio.sleep(0.033)  # ~30fps stream
+
+    return StreamingResponse(
+        stream_generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Connection": "close",
+        },
+    )
+
+
+@app.get("/api/camera/frame.jpg")
+def get_camera_frame():
+    """Returns the latest single camera frame as JPEG."""
+    if tracker_pipeline and tracker_pipeline.latest_frame_jpeg:
+        return Response(content=tracker_pipeline.latest_frame_jpeg, media_type="image/jpeg")
+    raise HTTPException(status_code=503, detail="Camera frame not ready")
 
 
 class TriggerActionRequest(BaseModel):

@@ -18,6 +18,8 @@ interface ActionDeckProps {
   cameraActive?: boolean;
   cameraRequested?: boolean;
   onToggleCamera?: (requested: boolean) => void;
+  pinchSeekSeconds?: number;
+  onUpdatePinchSeekSeconds?: (sec: number) => void;
 }
 
 export const ActionDeck: React.FC<ActionDeckProps> = ({
@@ -35,7 +37,24 @@ export const ActionDeck: React.FC<ActionDeckProps> = ({
   cameraActive = false,
   cameraRequested = false,
   onToggleCamera,
+  pinchSeekSeconds = 10,
+  onUpdatePinchSeekSeconds,
 }) => {
+  const [localSeekStep, setLocalSeekStep] = React.useState<number>(pinchSeekSeconds);
+
+  React.useEffect(() => {
+    if (pinchSeekSeconds) {
+      setLocalSeekStep(pinchSeekSeconds);
+    }
+  }, [pinchSeekSeconds]);
+
+  const handleSeekStepChange = (val: number) => {
+    setLocalSeekStep(val);
+    if (onUpdatePinchSeekSeconds) {
+      onUpdatePinchSeekSeconds(val);
+    }
+  };
+
   const currentTargetId = selectedTargetId || targetProfile || "auto";
 
   const handleTargetChange = (targetId: string) => {
@@ -230,6 +249,30 @@ export const ActionDeck: React.FC<ActionDeckProps> = ({
           <span className="text-[9px] text-[var(--grey)] uppercase">TEST OVERRIDE</span>
         </div>
 
+        {/* Pinch & Grab Seek Step Selector */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#121212] border border-[var(--ink)] text-[10px]">
+          <div className="flex items-center gap-2">
+            <span className="text-[#E5322B] font-bold">🤏 PINCH &amp; GRAB CONTROL:</span>
+            <span className="text-[var(--grey)]">Choose seek amount (&plusmn;{localSeekStep}s)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[5, 10, 15, 30, 60].map((step) => (
+              <button
+                key={step}
+                type="button"
+                onClick={() => handleSeekStepChange(step)}
+                className={`px-2 py-0.5 text-[9px] font-bold border transition-all cursor-pointer ${
+                  localSeekStep === step
+                    ? "bg-[#E5322B] text-white border-[#E5322B]"
+                    : "border-[var(--grey)]/40 text-[var(--grey)] hover:text-white"
+                }`}
+              >
+                {step}S
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             onClick={() => onTriggerAction("play_pause")}
@@ -280,18 +323,18 @@ export const ActionDeck: React.FC<ActionDeckProps> = ({
           </button>
 
           <button
-            onClick={() => onTriggerAction("seek_backward", { delta_seconds: -10 })}
-            className="btn-technical text-[10px] py-2.5 px-3 flex flex-col items-start gap-1"
+            onClick={() => onTriggerAction("seek_backward", { delta_seconds: -localSeekStep })}
+            className="btn-technical text-[10px] py-2.5 px-3 flex flex-col items-start gap-1 cursor-pointer"
           >
-            <span>SEEK -10S</span>
+            <span>SEEK -{localSeekStep}S</span>
             <span className="text-[8px] text-[var(--grey)]">SCRUB L (🤏)</span>
           </button>
 
           <button
-            onClick={() => onTriggerAction("seek_forward", { delta_seconds: 10 })}
-            className="btn-technical text-[10px] py-2.5 px-3 flex flex-col items-start gap-1"
+            onClick={() => onTriggerAction("seek_forward", { delta_seconds: localSeekStep })}
+            className="btn-technical text-[10px] py-2.5 px-3 flex flex-col items-start gap-1 cursor-pointer"
           >
-            <span>SEEK +10S</span>
+            <span>SEEK +{localSeekStep}S</span>
             <span className="text-[8px] text-[var(--grey)]">SCRUB R (🤏)</span>
           </button>
         </div>

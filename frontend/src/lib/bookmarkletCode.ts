@@ -643,8 +643,15 @@ export const REMOTECONTROL_CONSOLE_SNIPPET = `/**
             handlePrevious();
           } else if (act === "play_pause") {
             handlePlayPause();
-          } else if (act === "seek_delta") {
-            const delta = params.delta_seconds || 0;
+          } else if (act === "seek_delta" || act === "seek_forward" || act === "seek_backward") {
+            const defaultStep = 10;
+            const delta = params.delta_seconds !== undefined
+              ? params.delta_seconds
+              : act === "seek_forward"
+              ? defaultStep
+              : act === "seek_backward"
+              ? -defaultStep
+              : 0;
             if (Math.abs(delta) >= 1.0) {
               const video = getVideo();
               const player = getPlayer();

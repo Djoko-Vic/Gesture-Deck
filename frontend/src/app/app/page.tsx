@@ -9,7 +9,7 @@ import { Navbar } from "../../components/Navbar";
 import { SettingsModal } from "../../components/SettingsModal";
 import { GestureTrainerModal } from "../../components/GestureTrainerModal";
 import { YouTubeBridgeModal } from "../../components/YouTubeBridgeModal";
-import { fetchStatus, setTargetProfileApi, setMediaDetectionApi, setTargetApi, setCameraStateApi } from "../../lib/api";
+import { fetchStatus, fetchSettings, saveSettings, setTargetProfileApi, setMediaDetectionApi, setTargetApi, setCameraStateApi } from "../../lib/api";
 import { SystemStatus } from "../../lib/types";
 
 export default function AppDashboardPage() {
@@ -32,6 +32,22 @@ export default function AppDashboardPage() {
   const [isTrainerOpen, setIsTrainerOpen] = useState(false);
   const [isBridgeOpen, setIsBridgeOpen] = useState(false);
 
+  const [viewMode, setViewMode] = useState<"skeleton" | "webcam">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gesturedeck_view_mode");
+      if (saved === "webcam" || saved === "skeleton") return saved;
+    }
+    return "skeleton";
+  });
+
+  const [pinchSeekSeconds, setPinchSeekSeconds] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gesturedeck_seek_step");
+      if (saved) return parseFloat(saved) || 10;
+    }
+    return 10;
+  });
+
   useEffect(() => {
     const loadStatus = async () => {
       try {
@@ -45,6 +61,19 @@ export default function AppDashboardPage() {
     const interval = setInterval(loadStatus, 2500);
     return () => clearInterval(interval);
   }, []);
+
+  const handleUpdatePinchSeekSeconds = async (seconds: number) => {
+    setPinchSeekSeconds(seconds);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gesturedeck_seek_step", String(seconds));
+    }
+    try {
+      const current = await fetchSettings();
+      await saveSettings({ ...current, pinch_seek_seconds: seconds });
+    } catch (e) {
+      // quiet
+    }
+  };
 
   const handleManualAction = async (action: string, params?: Record<string, any>) => {
     sendAction(action, params);
@@ -119,11 +148,11 @@ export default function AppDashboardPage() {
         {/* Top Technical Metadata Bar */}
         <div className="border border-[var(--ink)] bg-[#0B0B0B] p-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[10px] font-mono gap-2">
           <div className="flex items-center gap-3">
-            <span className="bg-[#E5322B] text-[var(--paper)] font-bold px-1.5 py-0.5">
-              LIVE SKELETON
+            <span className={`${viewMode === "webcam" ? "bg-[#1E6B3E]" : "bg-[#E5322B]"} text-[var(--paper)] font-bold px-1.5 py-0.5 transition-colors`}>
+              {viewMode === "webcam" ? "LIVE WEBCAM + SKELETON" : "SKELETON ALONE"}
             </span>
             <span>SPEC: 21-JOINT DUAL HAND HUD</span>
-            <span className="text-[var(--grey)]">// MIRRORED COORDINATE SPACE</span>
+            <span className="text-[var(--grey)]">// PINCH CONTROL: &plusmn;{pinchSeekSeconds}S</span>
           </div>
 
           <div className="flex items-center gap-4 text-[var(--grey)]">
@@ -161,6 +190,10 @@ export default function AppDashboardPage() {
               activeGesture={activeGesture}
               fps={fps}
               cameraType={cameraType}
+              seekRangeSeconds={telemetry?.scrub?.range_seconds ?? 30}
+              pinchSeekSeconds={pinchSeekSeconds}
+              viewMode={viewMode}
+              onToggleViewMode={(mode) => setViewMode(mode)}
             />
 
             <ActionDeck
@@ -178,6 +211,8 @@ export default function AppDashboardPage() {
               cameraActive={telemetry?.camera_active ?? systemStatus?.camera_active ?? false}
               cameraRequested={telemetry?.camera_requested ?? systemStatus?.camera_requested ?? false}
               onToggleCamera={handleToggleCamera}
+              pinchSeekSeconds={pinchSeekSeconds}
+              onUpdatePinchSeekSeconds={handleUpdatePinchSeekSeconds}
             />
           </div>
 
@@ -350,6 +385,14 @@ export default function AppDashboardPage() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        onSettingsSaved={(newSettings) => {
+          if (newSettings.pinch_seek_seconds) {
+            setPinchSeekSeconds(newSettings.pinch_seek_seconds);
+          }
+          if (newSettings.default_view_mode) {
+            setViewMode(newSettings.default_view_mode);
+          }
+        }}
       />
 
       <GestureTrainerModal
@@ -362,6 +405,7 @@ export default function AppDashboardPage() {
         onClose={() => setIsBridgeOpen(false)}
         systemStatus={systemStatus}
         onTriggerAction={handleManualAction}
+        pinchSeekSeconds={pinchSeekSeconds}
       />
     </div>
   );

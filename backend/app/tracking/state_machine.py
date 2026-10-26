@@ -479,6 +479,8 @@ class GestureStateMachine:
                 "anchor_x": round(self.scrub_anchor_x, 3),
                 "smoothed_x": round(self.smoothed_drag_x or 0.0, 3),
                 "drag_progress": round((self.smoothed_drag_x - self.scrub_anchor_x) if self.is_scrubbing and self.smoothed_drag_x is not None else 0.0, 3),
+                "range_seconds": getattr(self.settings, "scrub_range_seconds", 60.0),
+                "pinch_seek_seconds": getattr(self.settings, "pinch_seek_seconds", 10.0),
             },
             "context": {
                 "active_profile": ctx.get("profile", "generic"),

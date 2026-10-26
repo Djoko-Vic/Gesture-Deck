@@ -51,6 +51,7 @@ class HandTrackerPipeline:
         self.is_mock_active: bool = False
         self.camera_requested: bool = False
         self.fps_actual: float = 0.0
+        self.latest_frame_jpeg: Optional[bytes] = None
 
         self._init_landmarker()
 
@@ -171,6 +172,12 @@ class HandTrackerPipeline:
                     # Mirror frame horizontally for intuitive interaction
                     # (user moves hand right -> hand on right of screen)
                     mirrored = cv2.flip(frame, 1)
+                    
+                    # Store JPEG for live browser webcam stream
+                    ret_enc, buf = cv2.imencode('.jpg', mirrored, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                    if ret_enc:
+                        self.latest_frame_jpeg = buf.tobytes()
+
                     rgb = cv2.cvtColor(mirrored, cv2.COLOR_BGR2RGB)
                     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
@@ -203,6 +210,16 @@ class HandTrackerPipeline:
 
             if self.is_mock_active:
                 hands_data = self.synthetic_gen.get_frame()
+                mock_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                mock_frame[:] = (12, 12, 12)
+                for gx in range(0, 640, 32):
+                    cv2.line(mock_frame, (gx, 0), (gx, 480), (24, 24, 24), 1)
+                for gy in range(0, 480, 32):
+                    cv2.line(mock_frame, (0, gy), (640, gy), (24, 24, 24), 1)
+                cv2.putText(mock_frame, "SYNTHETIC MOCK // STANDBY", (140, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (90, 90, 90), 1, cv2.LINE_AA)
+                ret_enc, buf = cv2.imencode('.jpg', mock_frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                if ret_enc:
+                    self.latest_frame_jpeg = buf.tobytes()
 
             # Process state machine
             now = time.time()

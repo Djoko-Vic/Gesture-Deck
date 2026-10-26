@@ -144,7 +144,10 @@ class ActionDispatcher:
             elif action_name == "mute":
                 success = self._handle_mute()
             elif action_name in ("seek_forward", "seek_backward", "seek_delta"):
-                delta = params.get("delta_seconds", 10.0 if action_name == "seek_forward" else -10.0)
+                default_step = getattr(self, "default_seek_seconds", 10.0)
+                default_delta = default_step if action_name == "seek_forward" else -default_step
+                delta = params.get("delta_seconds", default_delta)
+                params["delta_seconds"] = delta
                 success = self._handle_seek(delta, profile)
                 message = f"Seek {delta:+.1f}s committed under '{profile}'"
             elif action_name == "like_song":
@@ -312,20 +315,26 @@ class ActionDispatcher:
         self._mpris_call("seek_delta", {"delta_seconds": delta_seconds})
 
         if profile == "youtube":
-            # On YouTube: 'l' (+10s) and 'j' (-10s) seek anywhere on the page without requiring player focus!
             abs_delta = abs(delta_seconds)
             steps_10s = int(abs_delta // 10)
-            remaining_5s = int((abs_delta % 10) // 5)
+            remaining_5s = int(round((abs_delta % 10) / 5))
 
             step_key = "l" if delta_seconds > 0 else "j"
             arrow_key = Key.right if delta_seconds > 0 else Key.left
 
-            for _ in range(max(1, steps_10s)):
-                self.keyboard.tap(step_key)
-                time.sleep(0.03)
+            # If under 8 seconds, use 5s arrow keys rather than jumping 10s
+            if abs_delta < 8:
+                arrow_count = max(1, int(round(abs_delta / 5)))
+                for _ in range(arrow_count):
+                    self.keyboard.tap(arrow_key)
+                    time.sleep(0.03)
+            else:
+                for _ in range(steps_10s):
+                    self.keyboard.tap(step_key)
+                    time.sleep(0.03)
 
-            if remaining_5s > 0:
-                self.keyboard.tap(arrow_key)
+                if remaining_5s > 0:
+                    self.keyboard.tap(arrow_key)
 
             return True
 
