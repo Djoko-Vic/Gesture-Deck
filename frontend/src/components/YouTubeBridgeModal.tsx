@@ -175,26 +175,38 @@ export const YouTubeBridgeModal: React.FC<YouTubeBridgeModalProps> = ({
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
+              {/* The real hidden anchor for proper drag-to-bookmarks */}
               <a
                 href={REMOTECONTROL_BOOKMARKLET}
+                draggable
+                onDragStart={(e) => {
+                  // Set both URI-list and plain text so browsers treat it as a bookmark URL
+                  e.dataTransfer.setData("text/uri-list", REMOTECONTROL_BOOKMARKLET);
+                  e.dataTransfer.setData("text/plain", REMOTECONTROL_BOOKMARKLET);
+                  e.dataTransfer.effectAllowed = "link";
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   copyToClipboard(REMOTECONTROL_BOOKMARKLET, "bookmarklet");
                 }}
-                draggable
                 className="btn-technical text-xs py-2 px-4 border-2 border-[#E5322B] text-[#E5322B] font-bold hover:bg-[#E5322B] hover:text-white transition-all cursor-grab active:cursor-grabbing flex items-center gap-2"
-                title="Drag 'RemoteControl' to your Bookmarks Bar (Ctrl+Shift+B)"
+                title="Drag 'RemoteControl' to your Bookmarks Bar (Ctrl+Shift+B to show bar)"
               >
                 <span>📌</span>
-                <span>DRAG "RemoteControl" TO BOOKMARKS BAR</span>
+                <span>DRAG TO BOOKMARKS BAR</span>
               </a>
 
               <button
                 onClick={() => copyToClipboard(REMOTECONTROL_BOOKMARKLET, "bookmarklet")}
                 className="btn-technical text-xs py-2 px-3 text-[var(--grey)] hover:text-[var(--ink)]"
               >
-                {copiedType === "bookmarklet" ? "✓ COPIED BOOKMARKLET!" : "[ 📋 COPY JAVASCRIPT CODE ]"}
+                {copiedType === "bookmarklet" ? "✓ COPIED!" : "[ 📋 COPY CODE ]"}
               </button>
+            </div>
+
+            <div className="mt-2 p-2 border border-[#E5322B]/30 bg-[#E5322B]/5 text-[10px] text-[var(--grey)]">
+              <span className="text-[#E5322B] font-bold">⚠ DRAG NOT WORKING?</span> Use{" "}
+              <span className="text-[var(--ink)] font-bold">Option 2 (Console Paste)</span> below — it's faster and always works.
             </div>
           </div>
 

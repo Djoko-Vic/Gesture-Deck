@@ -53,9 +53,9 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
   return (
     <div className="flex flex-col gap-4 font-mono text-xs">
       {/* Top Spec Block: Wake State, Safety Clutch, Scrub Status, YouTube Bridge */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {/* 1. Wake State Indicator (Hard stepped ON/OFF) */}
-        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
+        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-2.5 flex flex-col justify-between min-h-[80px]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
               01 // STATE
@@ -91,7 +91,7 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
         </div>
 
         {/* 2. Safety Clutch */}
-        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
+        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-2.5 flex flex-col justify-between min-h-[80px]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
               02 // CLUTCH
@@ -119,7 +119,7 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
         </div>
 
         {/* 3. Scrub Status */}
-        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
+        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-2.5 flex flex-col justify-between min-h-[80px]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
               03 // SCRUB
@@ -145,7 +145,7 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
         </div>
 
         {/* 4. YouTube Bridge Status */}
-        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
+        <div className="border border-[var(--ink)] bg-[#0B0B0B] p-2.5 flex flex-col justify-between min-h-[80px]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
               04 // REMOTECONTROL
@@ -161,10 +161,10 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
             </span>
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${isBridgeConnected ? "bg-[#1E6B3E]" : "bg-[#E5322B]"}`} />
-              <span className="font-display-condensed text-base text-[var(--ink)] block truncate">
-                {isBridgeConnected ? "DOM CONTROL" : "NOT CONNECTED"}
+            <div className="flex items-center gap-1 min-w-0">
+              <span className={`w-2 h-2 flex-shrink-0 rounded-full ${isBridgeConnected ? "bg-[#1E6B3E]" : "bg-[#E5322B]"}`} />
+              <span className="font-display-condensed text-sm text-[var(--ink)] truncate">
+                {isBridgeConnected ? "CONNECTED" : "NOT C..."}
               </span>
             </div>
             {onOpenBridge ? (

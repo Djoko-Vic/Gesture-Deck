@@ -377,6 +377,8 @@ class GestureStateMachine:
                 is_globally_unlocked = (now - self.last_global_action_time) >= global_lockout_sec
 
                 is_volume_action = detected_gesture in ("thumbs_up", "thumbs_down")
+                # next/prev navigation does NOT require the left-hand safety clutch
+                is_nav_action = detected_gesture in ("next", "previous")
                 # Strict hold requirement: must hold steadily for full duration before firing
                 has_confirmed = (held_time_ms >= (target_confirm_ms - 1.0)) and (self.candidate_frames >= 5)
 
@@ -388,8 +390,17 @@ class GestureStateMachine:
                         and clutch_allows_action
                         and is_globally_unlocked
                     )
+                elif is_nav_action:
+                    # Navigation (next/previous) does NOT require clutch — just hold + cooldown + neutral reset
+                    is_neutral_cleared = (self.last_fired_gesture is None)
+                    can_fire = (
+                        has_confirmed
+                        and (now - self.last_action_fired_time) >= cooldown_sec
+                        and is_neutral_cleared
+                        and is_globally_unlocked
+                    )
                 else:
-                    # Non-volume actions require neutral reset (must have left pose)
+                    # All other actions require neutral reset AND clutch
                     is_neutral_cleared = (self.last_fired_gesture is None)
                     can_fire = (
                         has_confirmed
