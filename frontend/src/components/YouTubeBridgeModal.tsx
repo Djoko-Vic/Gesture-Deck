@@ -163,24 +163,59 @@ export const YouTubeBridgeModal: React.FC<YouTubeBridgeModalProps> = ({
           {/* Option 1: Bookmarklet (Self-Contained Inline Runner) */}
           <div className="border border-[var(--ink)] bg-[#121212] p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-[var(--ink)] uppercase">
-                ⚡ OPTION 1: "RemoteControl" BOOKMARKLET (ZERO-INSTALL)
+              <span className="font-bold text-sm text-[var(--ink)] uppercase flex items-center gap-2">
+                <span>📌</span>
+                <span>OPTION 1: "RemoteControl" BOOKMARK (RECOMMENDED &amp; ZERO-INSTALL)</span>
               </span>
-              <span className="text-[9px] bg-[#E5322B]/20 text-[#E5322B] border border-[#E5322B] px-1.5 py-0.5 font-bold uppercase">
+              <span className="text-[9px] bg-[#10b981]/20 text-[#10b981] border border-[#10b981] px-1.5 py-0.5 font-bold uppercase">
                 ONE-CLICK
               </span>
             </div>
             <p className="text-[11px] text-[var(--grey)] leading-relaxed">
-              Drag this button to your bookmarks bar (<code className="text-[#E5322B]">Ctrl + Shift + B</code> to toggle). It is a 100% self-contained runner that bypasses YouTube's strict Trusted Types policy!
+              Click once on any YouTube page to instantly connect site volume, next/prev, and the visual timeline scrubber!
             </p>
 
+            {/* Step-by-step setup guide */}
+            <div className="bg-black/60 border border-[var(--grey)]/30 p-3 flex flex-col gap-2 text-[11px]">
+              <span className="text-[var(--ink)] font-bold text-[10px] uppercase tracking-wider">
+                ⚡ EASY 10-SECOND SETUP:
+              </span>
+              <ol className="list-decimal list-inside space-y-1.5 text-[var(--grey)]">
+                <li>
+                  Click the button below to copy the bookmarklet code:
+                  <div className="my-1.5">
+                    <button
+                      onClick={() => copyToClipboard(REMOTECONTROL_BOOKMARKLET, "bookmarklet")}
+                      className={`btn-technical text-xs py-2 px-4 border-2 font-bold transition-all flex items-center gap-2 ${
+                        copiedType === "bookmarklet"
+                          ? "border-[#10b981] bg-[#10b981] text-black"
+                          : "border-[#E5322B] text-[#E5322B] hover:bg-[#E5322B] hover:text-white"
+                      }`}
+                    >
+                      <span>📋</span>
+                      <span>{copiedType === "bookmarklet" ? "✓ COPIED BOOKMARKLET CODE!" : "COPY BOOKMARKLET CODE"}</span>
+                    </button>
+                  </div>
+                </li>
+                <li>
+                  Press <code className="text-[var(--ink)] bg-[#222] px-1.5 py-0.5 font-mono font-bold">Ctrl + D</code> (or right-click your bookmarks bar &rarr; <b>Add page...</b>).
+                </li>
+                <li>
+                  Set Name to <code className="text-[#06b6d4] bg-[#222] px-1.5 py-0.5 font-mono font-bold">RemoteControl</code> and paste the copied code into the <b>URL</b> field.
+                </li>
+                <li>
+                  <b>Done!</b> On any YouTube video, click your <b>RemoteControl</b> bookmark &mdash; you will instantly see the green <span className="text-[#10b981] font-bold">RemoteControl Ready</span> badge on screen!
+                </li>
+              </ol>
+            </div>
+
+            {/* Alternative Drag option */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              {/* The real hidden anchor for proper drag-to-bookmarks */}
+              <span className="text-[10px] text-[var(--grey)] uppercase tracking-wider font-bold">OR DRAG TO BAR:</span>
               <a
                 href={REMOTECONTROL_BOOKMARKLET}
                 draggable
                 onDragStart={(e) => {
-                  // Set both URI-list and plain text so browsers treat it as a bookmark URL
                   e.dataTransfer.setData("text/uri-list", REMOTECONTROL_BOOKMARKLET);
                   e.dataTransfer.setData("text/plain", REMOTECONTROL_BOOKMARKLET);
                   e.dataTransfer.effectAllowed = "link";
@@ -189,24 +224,12 @@ export const YouTubeBridgeModal: React.FC<YouTubeBridgeModalProps> = ({
                   e.preventDefault();
                   copyToClipboard(REMOTECONTROL_BOOKMARKLET, "bookmarklet");
                 }}
-                className="btn-technical text-xs py-2 px-4 border-2 border-[#E5322B] text-[#E5322B] font-bold hover:bg-[#E5322B] hover:text-white transition-all cursor-grab active:cursor-grabbing flex items-center gap-2"
-                title="Drag 'RemoteControl' to your Bookmarks Bar (Ctrl+Shift+B to show bar)"
+                className="btn-technical text-xs py-1.5 px-3 border border-[var(--grey)] text-[var(--ink)] hover:border-[var(--ink)] font-bold transition-all cursor-grab active:cursor-grabbing flex items-center gap-1.5"
+                title="Drag to your bookmarks bar (Ctrl+Shift+B)"
               >
                 <span>📌</span>
-                <span>DRAG TO BOOKMARKS BAR</span>
+                <span>DRAG "RemoteControl" LINK</span>
               </a>
-
-              <button
-                onClick={() => copyToClipboard(REMOTECONTROL_BOOKMARKLET, "bookmarklet")}
-                className="btn-technical text-xs py-2 px-3 text-[var(--grey)] hover:text-[var(--ink)]"
-              >
-                {copiedType === "bookmarklet" ? "✓ COPIED!" : "[ 📋 COPY CODE ]"}
-              </button>
-            </div>
-
-            <div className="mt-2 p-2 border border-[#E5322B]/30 bg-[#E5322B]/5 text-[10px] text-[var(--grey)]">
-              <span className="text-[#E5322B] font-bold">⚠ DRAG NOT WORKING?</span> Use{" "}
-              <span className="text-[var(--ink)] font-bold">Option 2 (Console Paste)</span> below — it's faster and always works.
             </div>
           </div>
 

@@ -190,56 +190,156 @@ export default function AppDashboardPage() {
               onOpenBridge={() => setIsBridgeOpen(true)}
             />
 
-            {/* Printed Spec-Sheet Table for Gestures */}
+            {/* Technical Gesture Specification Matrix */}
             <div className="border border-[var(--ink)] bg-[#0B0B0B] p-4 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-[var(--grey)]/30 pb-2 mb-3">
-                <span className="text-[9px] uppercase tracking-widest text-[var(--grey)]">
-                  GESTURE SPECIFICATION TABLE
-                </span>
+              <div className="flex items-center justify-between border-b border-[var(--grey)]/30 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-[#E5322B] inline-block" />
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--ink)] font-bold">
+                    GESTURE SPECIFICATION MATRIX
+                  </span>
+                </div>
                 <button
                   onClick={() => setIsTrainerOpen(true)}
-                  className="text-[9px] text-[#7A4EAB] font-bold uppercase hover:underline"
+                  className="text-[10px] text-[#7A4EAB] font-bold uppercase hover:underline border border-[#7A4EAB]/40 px-2 py-0.5 hover:bg-[#7A4EAB]/10 transition-colors"
                 >
                   [ TRAIN CUSTOM ]
                 </button>
               </div>
 
-              <div className="flex flex-col gap-1 text-[11px]">
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">WAVE (👋)</span>
-                  <span className="text-[#1E6B3E] font-bold">&ge; 3 REVERSALS &rarr; WAKE</span>
+              {/* Matrix Column Headers */}
+              <div className="grid grid-cols-12 text-[9px] uppercase tracking-wider text-[var(--grey)] pb-1.5 border-b border-[var(--grey)]/30 font-bold px-1">
+                <div className="col-span-5">POSE / GESTURE</div>
+                <div className="col-span-3 text-center">CONDITION</div>
+                <div className="col-span-4 text-right">ACTION</div>
+              </div>
+
+              {/* Matrix Rows */}
+              <div className="divide-y divide-[var(--grey)]/15 text-[11px]">
+                {/* Wave */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>👋</span>
+                    <span>WAVE</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    &ge;3 Reversals
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#1E6B3E]">
+                    WAKE SYSTEM
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">LEFT PALM (✋)</span>
-                  <span className="text-[var(--ink)] font-bold">SAFETY CLUTCH ENGAGE</span>
+
+                {/* Left Palm */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>✋</span>
+                    <span>LEFT PALM</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold Open
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#E7E5E0]">
+                    SAFETY CLUTCH
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">INDEX UP (☝️)</span>
-                  <span className="text-[#E5322B] font-bold">PLAY / PAUSE</span>
+
+                {/* Index Up */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>☝️</span>
+                    <span>INDEX UP</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold 250ms
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#E5322B]">
+                    PLAY / PAUSE
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">PEACE SIGN (✌️)</span>
-                  <span className="text-[#E5322B] font-bold">NEXT TRACK</span>
+
+                {/* Peace Sign */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>✌️</span>
+                    <span>PEACE SIGN</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold 350ms
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#E5322B]">
+                    NEXT TRACK
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">3 FINGERS UP (✌️+💍)</span>
-                  <span className="text-[#E5322B] font-bold">PREVIOUS TRACK</span>
+
+                {/* 3 Fingers */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>✌️+💍</span>
+                    <span>3 FINGERS</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold 350ms
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#E5322B]">
+                    PREV TRACK
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">THUMBS UP / DOWN</span>
-                  <span className="text-[#E5322B] font-bold">VOLUME &plusmn;6% (REPEATS)</span>
+
+                {/* Thumbs Up/Down */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>👍 / 👎</span>
+                    <span>THUMBS</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold &amp; Step
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#E5322B]">
+                    VOLUME &plusmn;5%
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">PINCH &amp; DRAG (🤏)</span>
-                  <span className="text-[#E5322B] font-bold">SEEK TIMELINE (&plusmn;45S)</span>
+
+                {/* Pinch & Drag */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>🤏</span>
+                    <span>PINCH &amp; DRAG</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Move &plusmn;X
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[#06b6d4]">
+                    SEEK TIMELINE
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[var(--grey)]/15">
-                  <span className="font-bold">CLOSED FIST (✊)</span>
-                  <span className="text-[var(--grey)]">HOLD 1.0S &rarr; STANDBY SLEEP</span>
+
+                {/* Closed Fist */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 font-bold flex items-center gap-1.5">
+                    <span>✊</span>
+                    <span>CLOSED FIST</span>
+                  </div>
+                  <div className="col-span-3 text-center text-[10px] text-[var(--grey)]">
+                    Hold 1.0s
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-[var(--grey)]">
+                    STANDBY SLEEP
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 text-[10px] text-[var(--grey)]">
-                  <span>OPEN PALM (✋)</span>
-                  <span>NEUTRAL // NO ACTION</span>
+
+                {/* Open Palm */}
+                <div className="grid grid-cols-12 items-center py-2 px-1 text-[10px] text-[var(--grey)] hover:bg-white/[0.02] transition-colors">
+                  <div className="col-span-5 flex items-center gap-1.5">
+                    <span>✋</span>
+                    <span>OPEN PALM</span>
+                  </div>
+                  <div className="col-span-3 text-center">
+                    Resting
+                  </div>
+                  <div className="col-span-4 text-right">
+                    NEUTRAL / IDLE
+                  </div>
                 </div>
               </div>
             </div>

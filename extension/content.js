@@ -5,13 +5,16 @@
  */
 
 (function () {
-  if (window.__REMOTECONTROL_LOADED__) {
-    console.log("[RemoteControl] Bridge already active.");
+  if (window.__REMOTECONTROL_BRIDGE__) {
+    console.log("[RemoteControl] Bridge already active - refreshing status...");
+    try {
+      window.__REMOTECONTROL_BRIDGE__.ping();
+    } catch (e) {}
     return;
   }
   window.__REMOTECONTROL_LOADED__ = true;
 
-  console.log("%c[RemoteControl] YouTube RemoteControl initializing...", "color: #06b6d4; font-weight: bold; font-size: 13px;");
+  console.log("[RemoteControl] YouTube RemoteControl initializing...");
 
   const WS_URLS = ["ws://127.0.0.1:8000/ws", "ws://localhost:8000/ws"];
   let wsUrlIndex = 0;
@@ -64,11 +67,11 @@
   // Status Pill
   const statusPill = document.createElement("div");
   statusPill.id = "remotecontrol-status-pill";
-  statusPill.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:all 0.3s ease;opacity:0.9;";
+  statusPill.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);color:rgb(148,163,184);font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:all 0.3s ease;opacity:0.9;";
 
   const statusDot = document.createElement("span");
   statusDot.id = "remotecontrol-dot";
-  statusDot.style.cssText = "width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;transition:all 0.3s ease;";
+  statusDot.style.cssText = "width:8px;height:8px;border-radius:50%;background:rgb(239,68,68);box-shadow:0 0 8px rgb(239,68,68);transition:all 0.3s ease;";
 
   const statusLabel = document.createElement("span");
   statusLabel.id = "remotecontrol-label";
@@ -80,7 +83,7 @@
   // Action Notification Banner (Volume / Next / Prev / Scrub)
   const actionBanner = document.createElement("div");
   actionBanner.id = "remotecontrol-action-banner";
-  actionBanner.style.cssText = "display:none;align-items:center;gap:10px;padding:10px 18px;border-radius:14px;background:rgba(10,15,30,0.95);backdrop-filter:blur(12px);border:1px solid rgba(6,182,212,0.4);color:#f8fafc;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 20px rgba(6,182,212,0.25);transition:transform 0.2s cubic-bezier(0.16,1,0.3,1),opacity 0.2s ease;transform:translateY(10px) scale(0.96);opacity:0;";
+  actionBanner.style.cssText = "display:none;align-items:center;gap:10px;padding:10px 18px;border-radius:14px;background:rgba(10,15,30,0.95);backdrop-filter:blur(12px);border:1px solid rgba(6,182,212,0.4);color:rgb(248,250,252);font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 20px rgba(6,182,212,0.25);transition:transform 0.2s cubic-bezier(0.16,1,0.3,1),opacity 0.2s ease;transform:translateY(10px) scale(0.96);opacity:0;";
 
   overlayContainer.appendChild(actionBanner);
   overlayContainer.appendChild(statusPill);
@@ -113,13 +116,13 @@
     textCol.style.cssText = "display:flex;flex-direction:column;gap:2px;";
 
     const titleSpan = document.createElement("span");
-    titleSpan.style.cssText = "font-size:14px;font-weight:800;color:#ffffff;";
+    titleSpan.style.cssText = "font-size:14px;font-weight:800;color:rgb(255,255,255);";
     titleSpan.textContent = titleText;
     textCol.appendChild(titleSpan);
 
     if (detailText) {
       const detailSpan = document.createElement("span");
-      detailSpan.style.cssText = "font-size:11px;font-weight:600;color:#06b6d4;";
+      detailSpan.style.cssText = "font-size:11px;font-weight:600;color:rgb(6,182,212);";
       detailSpan.textContent = detailText;
       textCol.appendChild(detailSpan);
     }
@@ -160,7 +163,7 @@
     col.style.cssText = "display:flex;flex-direction:column;gap:4px;";
 
     const label = document.createElement("span");
-    label.style.cssText = "font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;";
+    label.style.cssText = "font-size:11px;font-weight:700;color:rgb(148,163,184);text-transform:uppercase;";
     label.textContent = "Site Volume";
     col.appendChild(label);
 
@@ -171,11 +174,11 @@
     barOuter.style.cssText = "width:100px;height:6px;background:rgba(255,255,255,0.15);border-radius:999px;overflow:hidden;";
 
     const barFill = document.createElement("div");
-    barFill.style.cssText = "width:" + vol + "%;height:100%;background:linear-gradient(90deg,#06b6d4,#3b82f6);border-radius:999px;";
+    barFill.style.cssText = "width:" + vol + "%;height:100%;background:linear-gradient(90deg,rgb(6,182,212),rgb(59,130,246));border-radius:999px;";
     barOuter.appendChild(barFill);
 
     const pctSpan = document.createElement("span");
-    pctSpan.style.cssText = "color:#06b6d4;font-size:13px;font-weight:800;min-width:32px;";
+    pctSpan.style.cssText = "color:rgb(6,182,212);font-size:13px;font-weight:800;min-width:32px;";
     pctSpan.textContent = vol + "%";
 
     barRow.appendChild(barOuter);
@@ -204,21 +207,21 @@
   function updateStatus(connected) {
     isConnected = connected;
     if (connected) {
-      statusDot.style.background = "#10b981";
-      statusDot.style.boxShadow = "0 0 10px #10b981";
+      statusDot.style.background = "rgb(16,185,129)";
+      statusDot.style.boxShadow = "0 0 10px rgb(16,185,129)";
       statusLabel.textContent = "RemoteControl Ready";
       statusPill.style.borderColor = "rgba(16, 185, 129, 0.4)";
-      statusPill.style.color = "#a7f3d0";
+      statusPill.style.color = "rgb(167,243,208)";
       showBanner("⚡", "RemoteControl Connected", "Site Volume & Visual Scrubber Active", 2000);
       setTimeout(() => {
         if (isConnected) statusPill.style.opacity = "0.35";
       }, 3500);
     } else {
-      statusDot.style.background = "#ef4444";
-      statusDot.style.boxShadow = "0 0 8px #ef4444";
+      statusDot.style.background = "rgb(239,68,68)";
+      statusDot.style.boxShadow = "0 0 8px rgb(239,68,68)";
       statusLabel.textContent = "RemoteControl Reconnecting...";
       statusPill.style.borderColor = "rgba(239, 68, 68, 0.4)";
-      statusPill.style.color = "#fca5a5";
+      statusPill.style.color = "rgb(252,165,165)";
       statusPill.style.opacity = "0.9";
     }
   }
@@ -295,17 +298,17 @@
 
     // 3. For standalone videos without playlist/autoplay, navigate to top recommendation
     const recCandidates = [
-      "ytd-compact-video-renderer a#thumbnail",
-      "ytd-rich-item-renderer a#thumbnail",
-      "#related ytd-compact-video-renderer a#thumbnail",
-      "ytd-watch-next-secondary-results-renderer a#thumbnail",
-      "#items ytd-compact-video-renderer a.yt-simple-endpoint",
+      "ytd-compact-video-renderer a[id='thumbnail']",
+      "ytd-rich-item-renderer a[id='thumbnail']",
+      "[id='related'] ytd-compact-video-renderer a[id='thumbnail']",
+      "ytd-watch-next-secondary-results-renderer a[id='thumbnail']",
+      "[id='items'] ytd-compact-video-renderer a.yt-simple-endpoint",
     ];
 
     for (let i = 0; i < recCandidates.length; i++) {
       const link = document.querySelector(recCandidates[i]);
       if (link && link.href && link.href.includes("watch?v=")) {
-        const titleElem = link.closest("ytd-compact-video-renderer, ytd-rich-item-renderer")?.querySelector("#video-title");
+        const titleElem = link.closest("ytd-compact-video-renderer, ytd-rich-item-renderer")?.querySelector("[id='video-title']");
         const nextTitle = titleElem ? titleElem.textContent.trim() : "Recommended Video";
         showBanner("⏭", "Next Video", nextTitle.slice(0, 35) + "...", 2000);
         link.click();
@@ -588,7 +591,7 @@
     }
 
     socket.onopen = () => {
-      console.log("%c[RemoteControl] Connected to backend on " + currentUrl + "!", "color: #10b981; font-weight: bold;");
+      console.log("%c[RemoteControl] Connected to backend on " + currentUrl + "!", "color: rgb(16,185,129); font-weight: bold;");
       updateStatus(true);
 
       // Register this client as the YouTube RemoteControl
@@ -681,6 +684,24 @@
       connect();
     }, 2000);
   }
+
+  function ping() {
+    attachOverlay();
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      showBanner("⚡", "RemoteControl Active", "Connected to GestureDeck", 1500);
+      updateStatus(true);
+    } else {
+      showBanner("⚡", "RemoteControl Connecting...", "Establishing link...", 1500);
+      connect();
+    }
+  }
+
+  window.__REMOTECONTROL_BRIDGE__ = {
+    ping: ping,
+    connect: connect,
+    getSocket: function () { return socket; },
+    isConnected: function () { return isConnected; },
+  };
 
   // Start connection
   connect();
