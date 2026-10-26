@@ -1,40 +1,49 @@
-# GestureDeck YouTube Bridge
+# RemoteControl — GestureDeck for YouTube
 
 Direct DOM visual scrubber click-and-drag, site-only volume control, and bulletproof next/previous video navigation for YouTube.
 
 ---
 
-## ⚡ Option 1: Instant 1-Click Bookmarklet (Zero Install)
+## ⚡ Option 1: Instant "RemoteControl" Bookmarklet (Zero-Install)
 
-The fastest way to connect YouTube without installing anything:
+The fastest one-click way to connect any YouTube video tab without installing anything:
 
-1. In Brave or Chrome, show the bookmarks bar (`Ctrl + Shift + B`).
-2. Add a new bookmark with:
-   - **Name**: `GestureDeck Bridge`
-   - **URL**:
-     ```javascript
-     javascript:(function(){if(window.__GESTUREDECK_BRIDGE_LOADED__){console.log('GestureDeck Bridge already loaded.');return;}const s=document.createElement('script');s.src='http://localhost:8000/static/extension/content.js?t='+Date.now();s.onload=function(){console.log('GestureDeck Bridge loaded successfully!');};s.onerror=function(){alert('Could not connect to GestureDeck backend at http://localhost:8000. Please start GestureDeck first!');};document.head.appendChild(s);})();
-     ```
+1. In Brave or Chrome, show your bookmarks bar (`Ctrl + Shift + B`).
+2. Add a new bookmark:
+   - **Name**: `RemoteControl`
+   - **URL**: Copy the code from [`extension/bookmarklet.txt`](bookmarklet.txt) (or click the drag button in the Studio HUD modal).
 3. Open any video on YouTube (e.g. `https://www.youtube.com/watch?v=...`).
-4. Click your **GestureDeck Bridge** bookmark!
-5. You will immediately see the glowing green pill in the bottom-right: **GestureDeck Ready**.
+4. Click your **RemoteControl** bookmark!
+5. A glowing green badge (**RemoteControl Ready**) immediately appears in the bottom-right of YouTube.
 
 ---
 
-## 🚀 Option 2: Browser Extension (Runs Automatically)
+## ⚡ Option 2: 2-Second Console Paste (Immediate Test)
 
-To make it automatically activate on every YouTube video:
+Want to connect your currently open YouTube tab right now in 2 seconds?
+
+1. On your YouTube tab, press **`F12`** (or right-click anywhere → **Inspect**).
+2. Click the **Console** tab.
+3. Open the Studio HUD (`http://localhost:3000/app`), click **`[ REMOTECONTROL ]`** and click **`COPY CONSOLE SCRIPT`**.
+4. Paste into the YouTube Console and press **Enter**!
+5. **RemoteControl Connected** will appear right on the video.
+
+---
+
+## 🚀 Option 3: Browser Extension (Runs Automatically)
+
+To make it automatically activate on every YouTube video you open:
 
 1. Open Brave / Chrome:
    - **Brave**: navigate to `brave://extensions`
    - **Chrome**: navigate to `chrome://extensions`
 2. Enable **Developer mode** (toggle in the top-right corner).
 3. Click **Load unpacked** (top-left button).
-4. Select the `extension/` folder from this repository:
+4. Select the `extension/` folder:
    ```
    /home/djokov1c/Proj/yt-hand-tracker/extension
    ```
-5. Done! The bridge will now automatically connect on every YouTube page.
+5. Done! RemoteControl will now run automatically on every YouTube tab.
 
 ---
 

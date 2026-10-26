@@ -163,10 +163,10 @@ def test_state_machine_neutral_reset():
 
     hand_data = [{"handedness": "Right", "confidence": 0.95, "landmarks": landmarks}]
 
-    # Feed 4 stable frames to fire play_pause
+    # Feed stable frames across the full 350ms confirm window to fire play_pause
     t = 10.0
     fired_count = 0
-    for i in range(4):
+    for i in range(8):
         res = sm.process_frame(hand_data, timestamp=t + i * 0.05)
         if res["action_event"]:
             fired_count += 1

@@ -354,15 +354,17 @@ class GestureStateMachine:
                     self.candidate_frames = 1
                     self.candidate_start_time = now
 
-                # Per-action confirm window target
-                base_confirm_ms = getattr(self.settings, "confirm_ms", 250)
+                # Per-action confirm window target (deliberate hold required)
+                base_confirm_ms = getattr(self.settings, "confirm_ms", 350)
                 if detected_gesture in ("thumbs_up", "thumbs_down"):
-                    target_confirm_ms = min(base_confirm_ms, 180)
+                    target_confirm_ms = max(250.0, float(base_confirm_ms))
+                elif detected_gesture in ("next", "previous"):
+                    target_confirm_ms = max(350.0, float(base_confirm_ms))
                 else:
-                    target_confirm_ms = base_confirm_ms
+                    target_confirm_ms = max(300.0, float(base_confirm_ms))
 
                 held_time_ms = (now - self.candidate_start_time) * 1000.0
-                confirm_progress = min(1.0, held_time_ms / max(50.0, float(target_confirm_ms)))
+                confirm_progress = min(1.0, held_time_ms / target_confirm_ms)
 
                 # Cooldown per action
                 if detected_gesture in ("thumbs_up", "thumbs_down"):
@@ -375,7 +377,8 @@ class GestureStateMachine:
                 is_globally_unlocked = (now - self.last_global_action_time) >= global_lockout_sec
 
                 is_volume_action = detected_gesture in ("thumbs_up", "thumbs_down")
-                has_confirmed = (held_time_ms >= target_confirm_ms) or (self.candidate_frames >= 4 and held_time_ms >= 140.0)
+                # Strict hold requirement: must hold steadily for full duration before firing
+                has_confirmed = (held_time_ms >= (target_confirm_ms - 1.0)) and (self.candidate_frames >= 5)
 
                 if is_volume_action:
                     # Volume can repeat slowly (~600ms) while held

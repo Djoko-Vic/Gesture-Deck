@@ -216,6 +216,10 @@ class WindowDetector:
                 res = subprocess.run(cmd, capture_output=True, text=True, timeout=0.5)
                 return res.returncode == 0, res.stdout or res.stderr
             elif action in ("volume_up", "volume_down"):
+                lower_bus = bus_name.lower()
+                if any(b in lower_bus for b in ("brave", "chromium", "chrome", "edge")):
+                    return False, "Chromium browser MPRIS does not support volume write"
+
                 delta = 0.06 if action == "volume_up" else -0.06
                 vol_cmd = [
                     "gdbus", "call", "--session", "--dest", bus_name,

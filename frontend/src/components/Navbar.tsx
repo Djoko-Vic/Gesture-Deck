@@ -111,10 +111,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? "border-[#1E6B3E] text-[#1E6B3E] hover:bg-[#1E6B3E] hover:text-white"
                   : "border-[#E5322B] text-[#E5322B] hover:bg-[#E5322B] hover:text-white"
               }`}
-              title="YouTube Bridge Status & Bookmarklet"
+              title="RemoteControl YouTube Bridge Status & Bookmarklet"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${isBridgeConnected ? "bg-[#1E6B3E]" : "bg-[#E5322B]"}`} />
-              <span>YT BRIDGE</span>
+              <span>REMOTECONTROL</span>
             </button>
           )}
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "GestureDeck YouTube Bridge",
+  "name": "RemoteControl",
   "version": "1.0.0",
-  "description": "Direct visual scrubber drag, site-only volume control, and gesture navigation for YouTube",
+  "description": "GestureDeck RemoteControl - Direct visual scrubber drag, site-only volume, and air-gesture control for YouTube",
   "permissions": [
     "storage"
   ],
@@ -11,7 +11,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "GestureDeck Bridge"
+    "default_title": "RemoteControl"
   },
   "content_scripts": [
     {
@@ -21,7 +21,8 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ]
 }

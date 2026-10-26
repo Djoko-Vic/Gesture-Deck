@@ -1,19 +1,20 @@
 /**
- * GestureDeck YouTube Bridge - Content Script
- * Provides direct DOM visual click-and-drag scrubbing, site-only volume control,
- * and reliable next/previous navigation for GestureDeck.
+ * RemoteControl - GestureDeck for YouTube
+ * Direct DOM visual click-and-drag scrubbing, site-only volume control,
+ * and reliable next/previous navigation for YouTube.
  */
 
 (function () {
-  if (window.__GESTUREDECK_BRIDGE_LOADED__) {
-    console.log("[GestureDeck] Bridge already active.");
+  if (window.__REMOTECONTROL_LOADED__) {
+    console.log("[RemoteControl] Bridge already active.");
     return;
   }
-  window.__GESTUREDECK_BRIDGE_LOADED__ = true;
+  window.__REMOTECONTROL_LOADED__ = true;
 
-  console.log("%c[GestureDeck] YouTube Bridge initializing...", "color: #06b6d4; font-weight: bold;");
+  console.log("%c[RemoteControl] YouTube RemoteControl initializing...", "color: #06b6d4; font-weight: bold; font-size: 13px;");
 
-  const WS_URL = "ws://localhost:8000/ws";
+  const WS_URLS = ["ws://127.0.0.1:8000/ws", "ws://localhost:8000/ws"];
+  let wsUrlIndex = 0;
   let socket = null;
   let reconnectTimer = null;
   let isConnected = false;
@@ -24,9 +25,9 @@
   let dragVideoDuration = 1;
   let lastTargetTime = 0;
 
-  // DOM Elements cache
+  // DOM Elements accessors
   function getPlayer() {
-    return document.getElementById("movie_player");
+    return document.getElementById("movie_player") || (window && window.movie_player);
   }
 
   function getVideo() {
@@ -54,78 +55,38 @@
   }
 
   // -------------------------------------------------------------------------
-  // On-Screen Floating HUD & Notifications
+  // On-Screen Floating HUD & Notifications (Zero innerHTML for strict CSP compliance)
   // -------------------------------------------------------------------------
   const overlayContainer = document.createElement("div");
-  overlayContainer.id = "gesturedeck-yt-hud";
-  overlayContainer.style.cssText = `
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999999;
-    pointer-events: none;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    user-select: none;
-  `;
+  overlayContainer.id = "remotecontrol-yt-hud";
+  overlayContainer.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:9999999;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;align-items:flex-end;gap:10px;user-select:none;";
 
   // Status Pill
   const statusPill = document.createElement("div");
-  statusPill.id = "gesturedeck-status-pill";
-  statusPill.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.8;
-  `;
-  statusPill.innerHTML = `
-    <span id="gesturedeck-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px #ef4444; transition: all 0.3s ease;"></span>
-    <span id="gesturedeck-label">GestureDeck Disconnected</span>
-  `;
+  statusPill.id = "remotecontrol-status-pill";
+  statusPill.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:all 0.3s ease;opacity:0.9;";
+
+  const statusDot = document.createElement("span");
+  statusDot.id = "remotecontrol-dot";
+  statusDot.style.cssText = "width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;transition:all 0.3s ease;";
+
+  const statusLabel = document.createElement("span");
+  statusLabel.id = "remotecontrol-label";
+  statusLabel.textContent = "RemoteControl Connecting...";
+
+  statusPill.appendChild(statusDot);
+  statusPill.appendChild(statusLabel);
 
   // Action Notification Banner (Volume / Next / Prev / Scrub)
   const actionBanner = document.createElement("div");
-  actionBanner.id = "gesturedeck-action-banner";
-  actionBanner.style.cssText = `
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    border-radius: 14px;
-    background: rgba(10, 15, 30, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(6, 182, 212, 0.35);
-    color: #f8fafc;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(6, 182, 212, 0.2);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
-    transform: translateY(10px) scale(0.96);
-    opacity: 0;
-  `;
+  actionBanner.id = "remotecontrol-action-banner";
+  actionBanner.style.cssText = "display:none;align-items:center;gap:10px;padding:10px 18px;border-radius:14px;background:rgba(10,15,30,0.95);backdrop-filter:blur(12px);border:1px solid rgba(6,182,212,0.4);color:#f8fafc;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 20px rgba(6,182,212,0.25);transition:transform 0.2s cubic-bezier(0.16,1,0.3,1),opacity 0.2s ease;transform:translateY(10px) scale(0.96);opacity:0;";
 
   overlayContainer.appendChild(actionBanner);
   overlayContainer.appendChild(statusPill);
 
   function attachOverlay() {
-    if (!document.getElementById("gesturedeck-yt-hud") && document.body) {
+    if (!document.getElementById("remotecontrol-yt-hud") && document.body) {
       document.body.appendChild(overlayContainer);
     }
   }
@@ -137,10 +98,35 @@
   }
 
   let bannerTimer = null;
-  function showToast(contentHtml, durationMs = 1500) {
+  function showBanner(iconText, titleText, detailText, durationMs = 1500) {
     attachOverlay();
-    actionBanner.innerHTML = contentHtml;
+    while (actionBanner.firstChild) {
+      actionBanner.removeChild(actionBanner.firstChild);
+    }
+
+    const iconSpan = document.createElement("span");
+    iconSpan.style.cssText = "font-size:18px;";
+    iconSpan.textContent = iconText;
+    actionBanner.appendChild(iconSpan);
+
+    const textCol = document.createElement("div");
+    textCol.style.cssText = "display:flex;flex-direction:column;gap:2px;";
+
+    const titleSpan = document.createElement("span");
+    titleSpan.style.cssText = "font-size:14px;font-weight:800;color:#ffffff;";
+    titleSpan.textContent = titleText;
+    textCol.appendChild(titleSpan);
+
+    if (detailText) {
+      const detailSpan = document.createElement("span");
+      detailSpan.style.cssText = "font-size:11px;font-weight:600;color:#06b6d4;";
+      detailSpan.textContent = detailText;
+      textCol.appendChild(detailSpan);
+    }
+
+    actionBanner.appendChild(textCol);
     actionBanner.style.display = "flex";
+
     requestAnimationFrame(() => {
       actionBanner.style.transform = "translateY(0) scale(1)";
       actionBanner.style.opacity = "1";
@@ -158,26 +144,80 @@
     }, durationMs);
   }
 
+  function showVolumeBanner(vol) {
+    attachOverlay();
+    while (actionBanner.firstChild) {
+      actionBanner.removeChild(actionBanner.firstChild);
+    }
+
+    const icon = vol === 0 ? "🔇" : vol < 50 ? "🔉" : "🔊";
+    const iconSpan = document.createElement("span");
+    iconSpan.style.cssText = "font-size:18px;";
+    iconSpan.textContent = icon;
+    actionBanner.appendChild(iconSpan);
+
+    const col = document.createElement("div");
+    col.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+
+    const label = document.createElement("span");
+    label.style.cssText = "font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;";
+    label.textContent = "Site Volume";
+    col.appendChild(label);
+
+    const barRow = document.createElement("div");
+    barRow.style.cssText = "display:flex;align-items:center;gap:8px;";
+
+    const barOuter = document.createElement("div");
+    barOuter.style.cssText = "width:100px;height:6px;background:rgba(255,255,255,0.15);border-radius:999px;overflow:hidden;";
+
+    const barFill = document.createElement("div");
+    barFill.style.cssText = "width:" + vol + "%;height:100%;background:linear-gradient(90deg,#06b6d4,#3b82f6);border-radius:999px;";
+    barOuter.appendChild(barFill);
+
+    const pctSpan = document.createElement("span");
+    pctSpan.style.cssText = "color:#06b6d4;font-size:13px;font-weight:800;min-width:32px;";
+    pctSpan.textContent = vol + "%";
+
+    barRow.appendChild(barOuter);
+    barRow.appendChild(pctSpan);
+    col.appendChild(barRow);
+    actionBanner.appendChild(col);
+
+    actionBanner.style.display = "flex";
+    requestAnimationFrame(() => {
+      actionBanner.style.transform = "translateY(0) scale(1)";
+      actionBanner.style.opacity = "1";
+    });
+
+    if (bannerTimer) clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => {
+      actionBanner.style.transform = "translateY(8px) scale(0.96)";
+      actionBanner.style.opacity = "0";
+      setTimeout(() => {
+        if (actionBanner.style.opacity === "0") {
+          actionBanner.style.display = "none";
+        }
+      }, 200);
+    }, 1200);
+  }
+
   function updateStatus(connected) {
     isConnected = connected;
-    const dot = document.getElementById("gesturedeck-dot");
-    const label = document.getElementById("gesturedeck-label");
-    if (!dot || !label) return;
-
     if (connected) {
-      dot.style.background = "#10b981";
-      dot.style.boxShadow = "0 0 10px #10b981";
-      label.textContent = "GestureDeck Ready";
-      statusPill.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      statusDot.style.background = "#10b981";
+      statusDot.style.boxShadow = "0 0 10px #10b981";
+      statusLabel.textContent = "RemoteControl Ready";
+      statusPill.style.borderColor = "rgba(16, 185, 129, 0.4)";
       statusPill.style.color = "#a7f3d0";
+      showBanner("⚡", "RemoteControl Connected", "Site Volume & Visual Scrubber Active", 2000);
       setTimeout(() => {
         if (isConnected) statusPill.style.opacity = "0.35";
-      }, 3000);
+      }, 3500);
     } else {
-      dot.style.background = "#ef4444";
-      dot.style.boxShadow = "0 0 8px #ef4444";
-      label.textContent = "GestureDeck Reconnecting...";
-      statusPill.style.borderColor = "rgba(239, 68, 68, 0.3)";
+      statusDot.style.background = "#ef4444";
+      statusDot.style.boxShadow = "0 0 8px #ef4444";
+      statusLabel.textContent = "RemoteControl Reconnecting...";
+      statusPill.style.borderColor = "rgba(239, 68, 68, 0.4)";
       statusPill.style.color = "#fca5a5";
       statusPill.style.opacity = "0.9";
     }
@@ -190,9 +230,9 @@
     const h = Math.floor(m / 60);
     if (h > 0) {
       const remM = m % 60;
-      return `${h}:${remM < 10 ? "0" : ""}${remM}:${rem < 10 ? "0" : ""}${rem}`;
+      return h + ":" + (remM < 10 ? "0" : "") + remM + ":" + (rem < 10 ? "0" : "") + rem;
     }
-    return `${m}:${rem < 10 ? "0" : ""}${rem}`;
+    return m + ":" + (rem < 10 ? "0" : "") + rem;
   }
 
   // -------------------------------------------------------------------------
@@ -204,35 +244,35 @@
     const video = getVideo();
 
     let newVol = 100;
-    if (player && typeof player.getVolume === "function") {
-      const current = player.getVolume();
-      newVol = Math.max(0, Math.min(100, Math.round(current + deltaPercent)));
-      player.setVolume(newVol);
-      if (player.isMuted() && deltaPercent > 0) {
-        player.unMute();
-      }
-    } else if (video) {
-      const current = Math.round(video.volume * 100);
-      newVol = Math.max(0, Math.min(100, Math.round(current + deltaPercent)));
-      video.volume = newVol / 100;
-      if (video.muted && deltaPercent > 0) {
-        video.muted = false;
-      }
+    let found = false;
+
+    if (player && typeof player.setVolume === "function" && typeof player.getVolume === "function") {
+      try {
+        const cur = player.getVolume();
+        newVol = Math.max(0, Math.min(100, Math.round(cur + deltaPercent)));
+        player.setVolume(newVol);
+        if (player.isMuted() && deltaPercent > 0) {
+          player.unMute();
+        }
+        found = true;
+      } catch (e) {}
     }
 
-    const icon = newVol === 0 ? "🔇" : newVol < 50 ? "🔉" : "🔊";
-    showToast(`
-      <span style="font-size: 18px;">${icon}</span>
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <span style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Site Volume</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden;">
-            <div style="width: ${newVol}%; height: 100%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 999px;"></div>
-          </div>
-          <span style="color: #06b6d4; font-size: 13px; font-weight: 800; min-width: 32px;">${newVol}%</span>
-        </div>
-      </div>
-    `, 1200);
+    if (video) {
+      try {
+        const curNorm = video.volume;
+        const targetNorm = Math.max(0, Math.min(1.0, curNorm + deltaPercent / 100));
+        video.volume = targetNorm;
+        if (video.muted && deltaPercent > 0) {
+          video.muted = false;
+        }
+        if (!found) {
+          newVol = Math.round(targetNorm * 100);
+        }
+      } catch (e) {}
+    }
+
+    showVolumeBanner(newVol);
   }
 
   function handleNext() {
@@ -249,11 +289,11 @@
     const nextBtn = document.querySelector(".ytp-next-button");
     if (nextBtn && !nextBtn.hasAttribute("aria-disabled") && nextBtn.offsetParent !== null) {
       nextBtn.click();
-      showToast(`<span style="font-size: 18px;">⏭</span><span>Next Video</span>`, 1500);
+      showBanner("⏭", "Next Video", "Advancing playback", 1500);
       return;
     }
 
-    // 3. For standalone videos (like watch?v=... with autoplay off), navigate to first recommendation!
+    // 3. For standalone videos without playlist/autoplay, navigate to top recommendation
     const recCandidates = [
       "ytd-compact-video-renderer a#thumbnail",
       "ytd-rich-item-renderer a#thumbnail",
@@ -262,18 +302,18 @@
       "#items ytd-compact-video-renderer a.yt-simple-endpoint",
     ];
 
-    for (const sel of recCandidates) {
-      const link = document.querySelector(sel);
+    for (let i = 0; i < recCandidates.length; i++) {
+      const link = document.querySelector(recCandidates[i]);
       if (link && link.href && link.href.includes("watch?v=")) {
         const titleElem = link.closest("ytd-compact-video-renderer, ytd-rich-item-renderer")?.querySelector("#video-title");
-        const nextTitle = titleElem ? titleElem.textContent.trim() : "Next Recommended Video";
-        showToast(`<span style="font-size: 18px;">⏭</span><span>Next: ${nextTitle.slice(0, 32)}...</span>`, 2000);
+        const nextTitle = titleElem ? titleElem.textContent.trim() : "Recommended Video";
+        showBanner("⏭", "Next Video", nextTitle.slice(0, 35) + "...", 2000);
         link.click();
         return;
       }
     }
 
-    showToast(`<span style="font-size: 18px;">⏭</span><span>Next Video Triggered</span>`, 1500);
+    showBanner("⏭", "Next Video", "Triggered", 1500);
   }
 
   function handlePrevious() {
@@ -285,11 +325,12 @@
     // If playing for > 3 seconds, restart current track from 0:00!
     if (currTime > 3.0) {
       if (player && typeof player.seekTo === "function") {
-        player.seekTo(0, true);
-      } else if (video) {
-        video.currentTime = 0;
+        try { player.seekTo(0, true); } catch (e) {}
       }
-      showToast(`<span style="font-size: 18px;">⏮</span><span>Restarted from 0:00</span>`, 1500);
+      if (video) {
+        try { video.currentTime = 0; } catch (e) {}
+      }
+      showBanner("⏮", "Restarted from 0:00", "Beginning of video", 1500);
       return;
     }
 
@@ -297,7 +338,7 @@
     if (player && typeof player.previousVideo === "function") {
       try {
         player.previousVideo();
-        showToast(`<span style="font-size: 18px;">⏮</span><span>Previous Video</span>`, 1500);
+        showBanner("⏮", "Previous Video", "Navigating backward", 1500);
         return;
       } catch (e) {}
     }
@@ -305,17 +346,17 @@
     const prevBtn = document.querySelector(".ytp-prev-button");
     if (prevBtn && !prevBtn.hasAttribute("aria-disabled") && prevBtn.offsetParent !== null) {
       prevBtn.click();
-      showToast(`<span style="font-size: 18px;">⏮</span><span>Previous Video</span>`, 1500);
+      showBanner("⏮", "Previous Video", "Navigating backward", 1500);
       return;
     }
 
     // History back
     if (window.history.length > 1) {
-      showToast(`<span style="font-size: 18px;">⏮</span><span>Going Back</span>`, 1500);
+      showBanner("⏮", "Going Back", "Browser history", 1500);
       window.history.back();
     } else {
       if (video) video.currentTime = 0;
-      showToast(`<span style="font-size: 18px;">⏮</span><span>Beginning of Video</span>`, 1500);
+      showBanner("⏮", "Beginning of Video", "At start", 1500);
     }
   }
 
@@ -324,22 +365,26 @@
     const video = getVideo();
 
     if (player && typeof player.getPlayerState === "function") {
-      // 1 = PLAYING, 2 = PAUSED
-      const state = player.getPlayerState();
-      if (state === 1) {
-        player.pauseVideo();
-        showToast(`<span style="font-size: 18px;">⏸</span><span>Paused</span>`, 1200);
-      } else {
-        player.playVideo();
-        showToast(`<span style="font-size: 18px;">▶</span><span>Playing</span>`, 1200);
-      }
-    } else if (video) {
+      try {
+        const state = player.getPlayerState();
+        if (state === 1) {
+          player.pauseVideo();
+          showBanner("⏸", "Paused", "", 1200);
+        } else {
+          player.playVideo();
+          showBanner("▶", "Playing", "", 1200);
+        }
+        return;
+      } catch (e) {}
+    }
+
+    if (video) {
       if (video.paused) {
         video.play();
-        showToast(`<span style="font-size: 18px;">▶</span><span>Playing</span>`, 1200);
+        showBanner("▶", "Playing", "", 1200);
       } else {
         video.pause();
-        showToast(`<span style="font-size: 18px;">⏸</span><span>Paused</span>`, 1200);
+        showBanner("⏸", "Paused", "", 1200);
       }
     }
   }
@@ -377,18 +422,18 @@
         isPrimary: true,
       });
       bar.dispatchEvent(downEvent);
-      bar.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX, clientY, buttons: 1 }));
+      bar.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: clientX, clientY: clientY, buttons: 1 }));
     } catch (e) {}
 
-    // Add dragging classes to show player controls & scrubber
+    // Add dragging classes to show player controls & scrubber handle
     const player = getPlayer();
-    if (player) {
+    if (player && player.classList) {
       player.classList.add("ytp-dragging");
       player.classList.remove("ytp-autohide");
     }
 
     statusPill.style.opacity = "1";
-    statusPill.style.borderColor = "rgba(6, 182, 212, 0.6)";
+    statusPill.style.borderColor = "rgba(6, 182, 212, 0.7)";
   }
 
   function updateScrub(deltaSeconds) {
@@ -424,27 +469,27 @@
       });
       bar.dispatchEvent(moveEvent);
       window.dispatchEvent(moveEvent);
-      bar.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX, clientY, buttons: 1 }));
+      bar.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: clientX, clientY: clientY, buttons: 1 }));
     } catch (e) {}
 
-    // 2. Direct DOM Styling: physically slide the red scrubber knob and fill
+    // 2. Direct DOM Styling: physically slide the red scrubber knob and progress fill
     const progressWidthPx = targetRatio * rect.width;
     if (scrubber) {
-      scrubber.style.transform = `translateX(${progressWidthPx}px)`;
+      scrubber.style.transform = "translateX(" + progressWidthPx + "px)";
     }
     if (playProgress) {
-      playProgress.style.transform = `scaleX(${targetRatio})`;
+      playProgress.style.transform = "scaleX(" + targetRatio + ")";
     }
 
     // 3. Update preview tooltip position and time text
     if (tooltip) {
       tooltip.style.display = "block";
-      tooltip.style.left = `${clientX}px`;
+      tooltip.style.left = clientX + "px";
       tooltip.classList.remove("ytp-tooltip-hidden");
     }
     if (tooltipText) {
       const sign = deltaSeconds >= 0 ? "+" : "";
-      tooltipText.textContent = `${formatSeconds(targetTime)} (${sign}${Math.round(deltaSeconds)}s)`;
+      tooltipText.textContent = formatSeconds(targetTime) + " (" + sign + Math.round(deltaSeconds) + "s)";
     }
 
     // 4. Seek video preview frame in real-time (allowSeekAhead = false keeps it smooth without buffering hang)
@@ -456,18 +501,12 @@
 
     // 5. On-Screen HUD feedback
     const sign = deltaSeconds >= 0 ? "+" : "";
-    const scrubHtml = `
-      <span style="font-size: 18px; color: #06b6d4;">⟷</span>
-      <div style="display: flex; flex-direction: column; gap: 2px;">
-        <div style="display: flex; align-items: baseline; gap: 6px;">
-          <span style="font-size: 15px; font-weight: 800; color: #ffffff;">${formatSeconds(targetTime)}</span>
-          <span style="font-size: 12px; color: #64748b;">/ ${formatSeconds(dragVideoDuration)}</span>
-          <span style="font-size: 12px; font-weight: 800; color: #06b6d4; margin-left: 4px;">(${sign}${Math.round(deltaSeconds)}s)</span>
-        </div>
-        <span style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Pinch & Drag Active</span>
-      </div>
-    `;
-    showToast(scrubHtml, 1500);
+    showBanner(
+      "⟷",
+      formatSeconds(targetTime) + " / " + formatSeconds(dragVideoDuration),
+      "Scrubbing " + sign + Math.round(deltaSeconds) + "s",
+      1200
+    );
   }
 
   function commitScrub() {
@@ -499,19 +538,20 @@
         });
         bar.dispatchEvent(upEvent);
         window.dispatchEvent(upEvent);
-        bar.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX, clientY, buttons: 0 }));
+        bar.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: clientX, clientY: clientY, buttons: 0 }));
       } catch (e) {}
     }
 
     // Commit seek with allowSeekAhead = true
     if (player && typeof player.seekTo === "function") {
-      player.seekTo(lastTargetTime, true);
-    } else if (video) {
-      video.currentTime = lastTargetTime;
+      try { player.seekTo(lastTargetTime, true); } catch (e) {}
+    }
+    if (video) {
+      try { video.currentTime = lastTargetTime; } catch (e) {}
     }
 
     // Clean up dragging classes and tooltip
-    if (player) {
+    if (player && player.classList) {
       player.classList.remove("ytp-dragging");
     }
     if (tooltip) {
@@ -520,14 +560,11 @@
       }, 300);
     }
 
-    showToast(`
-      <span style="font-size: 18px; color: #10b981;">✓</span>
-      <span>Seek committed to <b>${formatSeconds(lastTargetTime)}</b></span>
-    `, 1500);
+    showBanner("✓", "Seek Committed", formatSeconds(lastTargetTime), 1500);
 
     setTimeout(() => {
       if (isConnected) statusPill.style.opacity = "0.35";
-      statusPill.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      statusPill.style.borderColor = "rgba(16, 185, 129, 0.4)";
     }, 1500);
   }
 
@@ -540,19 +577,21 @@
       return;
     }
 
+    const currentUrl = WS_URLS[wsUrlIndex % WS_URLS.length];
     try {
-      socket = new WebSocket(WS_URL);
+      socket = new WebSocket(currentUrl);
     } catch (err) {
-      console.warn("[GestureDeck] WebSocket connection error:", err);
+      console.warn("[RemoteControl] WebSocket connection error to " + currentUrl + ":", err);
+      wsUrlIndex++;
       scheduleReconnect();
       return;
     }
 
     socket.onopen = () => {
-      console.log("%c[GestureDeck] Connected to backend!", "color: #10b981; font-weight: bold;");
+      console.log("%c[RemoteControl] Connected to backend on " + currentUrl + "!", "color: #10b981; font-weight: bold;");
       updateStatus(true);
 
-      // Register this client as the YouTube Bridge
+      // Register this client as the YouTube RemoteControl
       socket.send(
         JSON.stringify({
           type: "register",
@@ -611,13 +650,13 @@
                   video.currentTime = target;
                 }
                 const sign = delta >= 0 ? "+" : "";
-                showToast(`<span>Seek ${sign}${Math.round(delta)}s</span>`, 1200);
+                showBanner("⟷", "Seek " + sign + Math.round(delta) + "s", formatSeconds(target), 1200);
               }
             }
           }
         }
       } catch (err) {
-        console.error("[GestureDeck] Error parsing message:", err);
+        console.error("[RemoteControl] Error parsing message:", err);
       }
     };
 
@@ -626,6 +665,7 @@
       if (isDragging) {
         commitScrub();
       }
+      wsUrlIndex++;
       scheduleReconnect();
     };
 

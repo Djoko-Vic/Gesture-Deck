@@ -203,7 +203,7 @@ In the Studio HUD ([http://localhost:3000/app](http://localhost:3000/app)):
 Click **`[ CONFIG // SETTINGS ]`** in the Studio HUD:
 - **`PINCH GRAB THRESHOLD`** (Default: `0.40`): Higher values make pinching easier to initiate.
 - **`PINCH RELEASE (HYSTERESIS)`** (Default: `0.55`): Prevents dropping the scrub prematurely.
-- **`CONFIRM WINDOW`** (Default: `250 ms`): Milliseconds a pose must hold before executing.
+- **`CONFIRM WINDOW`** (Default: `350 ms`): Milliseconds a pose must hold continuously before executing (ensures intentional confirmation and eliminates instantaneous accidental triggers).
 - **`RELEASE REQUIREMENT`** (Default: `300 ms`): Milliseconds a hand must leave a pose before re-triggering.
 - **`DRAG DEADZONE`** (Default: `2.0%`): Deadzone to ignore natural hand tremor.
 - **`DRAG SMOOTHING`** (Default: `0.30`): Exponential smoothing coefficient for fluid scrubbing.
@@ -231,11 +231,11 @@ All command gestures are performed with the **Right Hand** while the controller 
 | Gesture Name | Physical Pose | Target Action | Confirmation & Cooldown |
 | :--- | :--- | :--- | :--- |
 | **Wave to Wake** | Open palm waving side-to-side ($\ge 3$ reversals in 1s) | **Wake Controller** | 1500ms post-wake grace lockout |
-| **Play / Pause** | Index finger extended straight UP ☝️ | **Toggle Play / Pause** | 250ms hold + 800ms cooldown + neutral reset |
-| **Next Track** | Peace Sign ✌️ (Index + Middle extended UP in V) | **Next Track / Video** | Direct DOM click on next video or top recommendation; 300ms hold + 1000ms cooldown |
-| **Previous Track**| Three Fingers ✌️+💍 (Index + Middle + Ring extended UP) | **Restart (0:00) / Prev** | Restarts video from 0:00 (if >3s) or previous video; 300ms hold + 1000ms cooldown |
-| **Volume Up** | Thumbs Up 👍 (Thumb UP, 4 fingers folded) | **Site Volume +5%** | Modifies **only** player/site volume, protecting host OS volume! Repeats ~600ms while held |
-| **Volume Down** | Thumbs Down 👎 (Thumb DOWN, 4 fingers folded) | **Site Volume -5%** | Modifies **only** player/site volume, protecting host OS volume! Repeats ~600ms while held |
+| **Play / Pause** | Index finger extended straight UP ☝️ | **Toggle Play / Pause** | 350ms deliberate hold + 800ms cooldown + neutral reset |
+| **Next Track** | Peace Sign ✌️ (Index + Middle extended UP in V) | **Next Track / Video** | Direct DOM click on next video or top recommendation; 350ms hold + 1000ms cooldown |
+| **Previous Track**| Three Fingers ✌️+💍 (Index + Middle + Ring extended UP) | **Restart (0:00) / Prev** | Restarts video from 0:00 (if >3s) or previous video; 350ms hold + 1000ms cooldown |
+| **Volume Up** | Thumbs Up 👍 (Thumb UP, 4 fingers folded) | **Site Volume +5%** | Modifies **only** player/site volume, protecting host OS volume! 250ms hold, repeats ~600ms while held |
+| **Volume Down** | Thumbs Down 👎 (Thumb DOWN, 4 fingers folded) | **Site Volume -5%** | Modifies **only** player/site volume, protecting host OS volume! 250ms hold, repeats ~600ms while held |
 | **Pinch & Drag** | Thumb tip + Index tip touching ($\le 0.40$ gap) | **Visual Scrubber Drag** | Clicks and drags YouTube's red scrubber handle & thumbnail preview across the screen |
 | **Closed Fist** | All 5 fingers folded ✊ held $\ge 1.0\text{s}$ | **Standby Sleep** | Manual sleep trigger |
 | **Open Palm** | All 5 fingers extended facing camera 🖐️ | **Neutral (Safe Pose)** | Safe resting pose after waving |
@@ -280,26 +280,35 @@ Gap widens > 0.55 ──► Dispatches `pointerup` / `mouseup` & commits seekTo(
 
 ---
 
-## 7. GestureDeck YouTube Bridge Setup
+## 7. RemoteControl YouTube Bridge Setup
 
-To enable physical scrubber dragging and site-only volume on YouTube, use either of these two zero-friction methods:
+To enable physical scrubber dragging, smart video navigation, and site-only volume on YouTube, use any of these zero-friction methods:
 
-### ⚡ Option 1: 1-Click Bookmarklet (Instant, Zero Install)
+### ⚡ Method 1: The `RemoteControl` Bookmarklet (Zero-Install Bookmark)
 1. In Brave or Chrome, show your bookmarks bar (`Ctrl + Shift + B`).
-2. Open the Studio HUD at `http://localhost:3000/app` and click **`[ ⚡ YT BRIDGE ]`**.
-3. Drag the **`📌 DRAG ME TO BOOKMARKS BAR`** button to your browser bookmarks bar (or copy the JavaScript code).
-4. On any YouTube tab, click your new bookmark!
-5. A sleek glowing green badge (**GestureDeck Ready**) appears in the bottom-right of YouTube.
+2. Open the Studio HUD at [http://localhost:3000/app](http://localhost:3000/app) and click **`[ ⚡ REMOTECONTROL ]`** in the header.
+3. Drag the glowing green **`📌 RemoteControl`** button directly to your browser's bookmarks bar!
+4. On any YouTube video page, simply click the **`RemoteControl`** bookmark.
+5. A neon green badge (**`⚡ REMOTECONTROL READY`**) appears in the bottom-right corner of YouTube.
 
-### 🚀 Option 2: Browser Extension (Automatic)
+> **💡 Trusted-Types & CSP Proof:** Modern YouTube enforces strict `TrustedScriptURL` Content Security Policies. The `RemoteControl` bookmarklet is completely self-contained and inline—it executes safely in memory without injecting external `<script>` tags, preventing browser CSP security blocks.
+
+### 📋 Method 2: 2-Second DevTools Console Paste
+If you don't use the bookmarks bar:
+1. On your YouTube video tab, press **`F12`** (or `Ctrl + Shift + J`) to open Developer Tools.
+2. Click **`[ COPY CONSOLE CODE ]`** in the HUD modal (or copy `extension/bookmarklet.txt`).
+3. Paste into the Console and press **`Enter`**.
+4. The `RemoteControl` bridge connects instantly!
+
+### 🚀 Method 3: `RemoteControl` Extension (Automatic On All YouTube Tabs)
 1. Open `brave://extensions` (or `chrome://extensions`).
 2. Toggle **Developer mode** in the top-right corner.
 3. Click **Load unpacked** in the top-left corner.
-4. Select the `extension/` folder in this repo:
+4. Select the `extension/` directory from this project:
    ```
    /home/djokov1c/Proj/yt-hand-tracker/extension
    ```
-5. Done! The bridge will now automatically connect whenever you open YouTube.
+5. Done! `RemoteControl` runs automatically in the page's main world whenever you visit YouTube.
 
 ---
 

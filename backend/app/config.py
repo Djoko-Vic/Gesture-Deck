@@ -32,7 +32,7 @@ class AppSettings(BaseModel):
     drag_smoothing: float = Field(default=0.30, ge=0.05, le=0.90, description="Smoothing factor for drag position")
     scrub_range_seconds: float = Field(default=60.0, ge=15.0, le=300.0, description="Maximum seek range across comfortable sweep")
     dropout_frames: int = Field(default=6, ge=1, le=15, description="Allowed frames to maintain state during brief tracking dropout")
-    confirm_ms: int = Field(default=250, ge=50, le=1500, description="Gesture hold duration in ms before firing")
+    confirm_ms: int = Field(default=350, ge=50, le=1500, description="Gesture hold duration in ms before firing")
     release_ms: int = Field(default=300, ge=100, le=1500, description="Pose leave duration in ms required before re-firing")
     global_lockout_ms: int = Field(default=400, ge=0, le=2000, description="Lockout window in ms after any action fires")
     

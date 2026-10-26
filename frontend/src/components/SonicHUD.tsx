@@ -148,7 +148,7 @@ export const SonicHUD: React.FC<SonicHUDProps> = ({
         <div className="border border-[var(--ink)] bg-[#0B0B0B] p-3.5 flex flex-col justify-between min-h-[92px]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-[var(--grey)]">
-              04 // YT BRIDGE
+              04 // REMOTECONTROL
             </span>
             <span
               className={`px-1.5 py-0.2 text-[9px] border font-bold ${

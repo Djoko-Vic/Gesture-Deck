@@ -19,7 +19,7 @@
   "drag_smoothing": 0.3,
   "scrub_range_seconds": 60.0,
   "dropout_frames": 6,
-  "confirm_ms": 250,
+  "confirm_ms": 350,
   "release_ms": 300,
   "global_lockout_ms": 400,
   "media_detection_enabled": true,

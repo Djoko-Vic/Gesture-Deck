@@ -103,19 +103,32 @@ class ActionDispatcher:
         # Direct MPRIS execution if an MPRIS target is explicitly selected
         if self.selected_target_id.startswith("mpris:"):
             bus_name = self.selected_target_id.replace("mpris:", "")
-            m_success, m_msg = self.window_detector.control_mpris_player(bus_name, action_name, params)
-            if m_success:
-                event = {
-                    "action": action_name,
-                    "success": True,
-                    "message": f"Direct MPRIS command '{action_name}' sent to {bus_name}",
-                    "profile": profile,
-                    "timestamp": now,
-                }
-                self.action_history.append(event)
-                if len(self.action_history) > 50:
-                    self.action_history.pop(0)
-                return event
+            lower_bus = bus_name.lower()
+            is_chromium = any(b in lower_bus for b in ("brave", "chromium", "chrome", "edge"))
+            # Chromium MPRIS does not support writing volume; let _handle_volume execute instead
+            if not (is_chromium and action_name in ("volume_up", "volume_down")):
+                m_success, m_msg = self.window_detector.control_mpris_player(bus_name, action_name, params)
+                if m_success:
+                    event = {
+                        "action": action_name,
+                        "params": params,
+                        "success": True,
+                        "message": f"Direct MPRIS command '{action_name}' sent to {bus_name}",
+                        "profile": profile,
+                        "timestamp": now,
+                    }
+                    self.action_history.append(event)
+                    if len(self.action_history) > 50:
+                        self.action_history.pop(0)
+
+                    # Notify WebSocket listeners so RemoteControl bridge can react
+                    for listener in self.listeners:
+                        try:
+                            listener(event)
+                        except Exception:
+                            pass
+
+                    return event
 
         try:
             if action_name == "play_pause":
